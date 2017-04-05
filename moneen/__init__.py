@@ -58,7 +58,8 @@ def bokeh():
     #source = source.unstack()
     source = plt.ColumnDataSource(data=source)
 
-    p(source.data['power'])
+    p("READINGS")
+    p(len(source.data['power']))
 
     plot = plt.figure(
         width=800, height=600,
