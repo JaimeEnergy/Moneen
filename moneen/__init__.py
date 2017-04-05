@@ -5,18 +5,23 @@ import psycopg2
 import pandas as pd
 import numpy as np
 import bokeh.plotting as plt
+
 from bokeh.charts import TimeSeries
 from bokeh.io import show, output_notebook
 from bokeh.models.formatters import DatetimeTickFormatter
 from bokeh.models import FixedTicker, HoverTool, Span
 from bokeh.resources import CDN
 from bokeh.embed import file_html
-
+from urllib import parse
 import sys # For Printing
 
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+
+parse.uses_netloc.append("postgres")
+url = parse.urlparse(os.environ["DATABASE_URL"])
 
 
 #DATABASE = 'power.db'
@@ -28,7 +33,13 @@ def p(arg):
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
+        db = g._database =  psycopg2.connect(
+                                        database=url.path[1:],
+                                        user=url.username,
+                                        password=url.password,
+                                        host=url.hostname,
+                                        port=url.port
+                                    )
     return db
 
 @app.teardown_appcontext
