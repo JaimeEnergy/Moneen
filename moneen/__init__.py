@@ -1,5 +1,8 @@
+import os
+
 import flask
 import bokeh
+
 from flask import Flask, g
 import psycopg2
 import pandas as pd
@@ -19,9 +22,10 @@ import sys # For Printing
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
+db_url ="postgres://cwgopxoymqmtck:364d0ecc94b5b605910ec1ab5e9290fd16a43809d12ea3ac03b7a3ac1e05081d@ec2-107-22-223-6.compute-1.amazonaws.com:5432/d7r4mu483bkfoe"
 
 parse.uses_netloc.append("postgres")
-url = parse.urlparse(os.environ["DATABASE_URL"])
+url = parse.urlparse(os.environ.get("DATABASE_URL", db_url))
 
 
 #DATABASE = 'power.db'
@@ -57,14 +61,15 @@ def bokeh():
     df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp')
     #df.index= df.index*1000000000
     #df.index = pd.to_datetime(source.index-1000000, utc=True)
+    p(df.head())
     df = df.sort_index()
     df = df.diff()
     rm = df.rolling(window=180).mean()[180:][::60]
     
     source = rm.copy()
 
-    source['hourly_min'] = rm.resample('H').min().reindex(rm.index,method='ffill')
-    source['hourly_max'] = rm.resample('H').max().reindex(rm.index,method='ffill')
+    source['hourly_min'] = rm.resample('H').min().reindex(df.index,method='ffill')
+    source['hourly_max'] = rm.resample('H').max().reindex(df.index,method='ffill')
     source['dates'] = rm.index.strftime('%a %d %b')
     source['time'] = rm.index.strftime('%H:%M:%S')
     source['percent'] = rm['power'] * (100/(4.25)*36/100)
