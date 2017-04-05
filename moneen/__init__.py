@@ -1,3 +1,5 @@
+import flask
+import bokeh
 from flask import Flask, g
 import psycopg2
 import pandas as pd
@@ -17,6 +19,7 @@ app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 
+#DATABASE = 'power.db'
 
 def p(arg):
     print(arg, file=sys.stderr)
@@ -25,7 +28,7 @@ def p(arg):
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = psycopg2.connect("dbname=power user=postgres password=postgres")
+        db = g._database = sqlite3.connect(DATABASE)
     return db
 
 @app.teardown_appcontext
