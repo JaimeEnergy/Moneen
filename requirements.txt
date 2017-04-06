@@ -1,4 +1,5 @@
 Flask
-psycopg2
+sqlite3
 bokeh
 pandas
+Flask-Cache

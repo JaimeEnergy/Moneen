@@ -1,9 +1,10 @@
 import os
-
 import flask
 import bokeh
+import flask_cache
 
-from flask import Flask, g
+from flask import Flask, g, make_response
+from flask_cache import Cache
 import psycopg2
 import pandas as pd
 import numpy as np
@@ -21,11 +22,11 @@ import sys # For Printing
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+cache = Cache(app,config={'CACHE_TYPE': 'simple'})
 
-db_url ="postgres://cwgopxoymqmtck:364d0ecc94b5b605910ec1ab5e9290fd16a43809d12ea3ac03b7a3ac1e05081d@ec2-107-22-223-6.compute-1.amazonaws.com:5432/d7r4mu483bkfoe"
 
 parse.uses_netloc.append("postgres")
-url = parse.urlparse(os.environ.get("DATABASE_URL", db_url))
+url = parse.urlparse(os.environ.get("DATABASE_URL", None))
 
 
 #DATABASE = 'power.db'
@@ -37,13 +38,17 @@ def p(arg):
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database =  psycopg2.connect(
-                                        database=url.path[1:],
-                                        user=url.username,
-                                        password=url.password,
-                                        host=url.hostname,
-                                        port=url.port
-                                    )
+        try:
+            db = g._database =  psycopg2.connect(
+                                            database=url.path[1:],
+                                            user=url.username,
+                                            password=url.password,
+                                            host=url.hostname,
+                                            port=url.port
+                                        )
+        except:
+            p("LOCAL DB")
+            db =  psycopg2.connect("dbname=power user=postgres password=postgres")
     return db
 
 @app.teardown_appcontext
@@ -52,33 +57,67 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
+@app.route('/pr/<text>')
+def add_power_reading(text):
+    lines = text.split('!')
+    conn = get_db()
+    cursor = conn.cursor()
+    # timestamp to timestamp
+    #timestamp = datetime.datetime.strptime(timestamp,'%d-%m-%Y-%H:%M:%S')
 
+    # reading to int
+    #reading = int(reading)
+
+    insert_query = None
+
+    for line in lines:
+        timestamp, power = line.split('-')
+
+        # get power table
+
+        sql = f"""
+            INSERT INTO ActivePower(Timestamp, Power) VALUES(to_timestamp({timestamp}), {power})
+            ON CONFLICT DO NOTHING
+            """
+        cursor.execute(sql)
+
+    conn.commit()
+    cursor.close()
+
+    return make_response("Name accepted")
+
+@cache.cached(timeout=30)
 @app.route('/moneen')
 def bokeh():
+
+    for rule in app.url_map.iter_rules():
+        p(rule)
+
     conn = get_db()
     cursor = conn.cursor()
 
     df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp')
     #df.index= df.index*1000000000
     #df.index = pd.to_datetime(source.index-1000000, utc=True)
-    p(df.head())
-    df = df.sort_index()
-    df = df.diff()
-    rm = df.rolling(window=180).mean()[180:][::60]
     
+    df = df.sort_index()
+    diff = df.diff()
+    
+    rm = diff.rolling(window=180).mean()[180:][::60]
     source = rm.copy()
 
     source['hourly_min'] = rm.resample('H').min().reindex(df.index,method='ffill')
     source['hourly_max'] = rm.resample('H').max().reindex(df.index,method='ffill')
-    source['dates'] = rm.index.strftime('%a %d %b')
-    source['time'] = rm.index.strftime('%H:%M:%S')
+    source['date'] = rm.index.strftime('%a %d %b')
+    source['time'] = rm.index.strftime('%H:%M')
     source['percent'] = rm['power'] * (100/(4.25)*36/100)
 
     #source = source.unstack()
     source = plt.ColumnDataSource(data=source)
 
-    p("READINGS")
-    p(len(source.data['power']))
+    #p("READINGS")
+    #p(len(source.data['power']))
+    #p(source.data['date'])
 
     plot = plt.figure(
         width=800, height=600,
@@ -100,16 +139,18 @@ def bokeh():
 
     majorticks = [
         date.to_datetime64().astype('datetime64[ms]').view(np.int64)
-        for date in source.data['timestamp']
+        for date in df.index
         if date.hour == 0
-        and date.minute < 10
+        and date.minute == 00
     ]
+
+    p(majorticks)
 
     minorticks = [
         date.to_datetime64().astype('datetime64[ms]').view(np.int64)
-        for date in source.data['timestamp']
+        for date in df.index
         if date.hour == 0
-        and date.minute < 10
+        and date.minute == 0
         and date not in majorticks
     ]
 
@@ -139,8 +180,8 @@ def bokeh():
         </div>
         <table border="0" cellpadding="10">
             <tr>
-                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@dates: </span></th>
-                <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@Power</span></td>
+                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@time: </span></th>
+                <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@power</span></td>
             </tr>
             <tr>
                 <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">hourly_min:</span></th>
@@ -155,3 +196,7 @@ def bokeh():
 
     plot.add_tools(hover)
     return file_html(plot, CDN, "some my plot")
+
+
+
+        
