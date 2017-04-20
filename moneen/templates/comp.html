@@ -1,0 +1,143 @@
+<html>
+
+
+	<head>
+			
+			<script>
+				<!-- https://api.jqueryui.com/datepicker/#option-minDate
+				-->
+				 $(function() {
+					$( "#datepicker-1" ).datepicker({ dateFormat: 'dd-mm-yy',
+					changeMonth: true,
+					changeYear: true,
+					yearRange: '2017:2017',
+					dateFormat : 'dd-mm-yy',
+					defaultDate: '{{start}}'
+			});
+					$( "#datepicker-1" ).datepicker("show");
+				 });
+			</script>
+			
+			<script>
+				 $(function() {
+					$( "#datepicker-2" ).datepicker({ dateFormat: 'dd-mm-yy',
+					changeMonth: true,
+					changeYear: true,
+					yearRange: '2017:2017',
+					dateFormat : 'dd-mm-yy',
+					defaultDate: '{{finish}}'
+			});
+					$( "#datepicker-2" ).datepicker("show");
+				 });
+			</script>
+	</head>
+	
+	<body>
+		<div class="container">
+	
+		<form name="htmlform" method="post" action="{{ url_for('edit_appointment', random=random, jid=jid, windfarm=windfarm) }}" role="form">
+		<input type="hidden" name="turbine" value = "{{windfarm}}">
+		<input type="hidden" name="jid" value = "{{jid}}">
+			<table width="450px" style="border-collapse: collapse;">
+				<tr><td colspan=4>Turbine Details: {{windfarm}}</td></tr>
+				
+				<tr><td colspan=4>Appointment Times:</td></tr>
+				
+				<!--  -->
+				<tr colspan=4>
+						
+					<td valign="top" colspan=2>
+						<label for="start" >Start Date:</label>
+					</td>
+					<td valign="top">
+						<input  type="text" name="start" maxlength="10" size="10" 
+						id='datepicker-1' value={{start}}>
+					</td>
+					
+					<td valign="top" colspan=1>
+						<label for="start_time" >Time:</label>
+					</td>
+					<td align="left">
+						<!--<input type="time" name="start_time">-->
+						<select name="start_time" value={{st}}>
+							<option  value="{{st}}">{{st}}</option>
+							 {% for period, time in times %}
+								<option  value="{{time}}">{{time}}</option>
+							 {% endfor %}
+						</select>
+					</td>
+				</tr>
+ 
+				
+				<!--  -->
+				<tr style="border-bottom: 2px solid black;">
+					<td valign="top" colspan=2>
+						<label for="finish" >Finish Date:</label>
+					</td>
+					<td valign="top">
+						<input  type="text" name="finish" maxlength="10" size="10" 
+						id='datepicker-2' value={{finish}}>
+					</td>
+					
+					<td valign="top">
+						<label for="finish_time" >Time:</label>
+					</td>
+					<td valign="top">
+						<select name="finish_time" value={{ft}}>
+						     <option  value="{{ft}}">{{ft}}</option>
+							 {% for period, time in times %}
+								<option  value="{{time}}">{{time}}</option>
+							 {% endfor %}
+						 </select>
+					</td>
+				</tr>
+ 
+ 
+				<!--  -->
+				<tr><td colspan=4>Information:</td></tr>
+				<tr colspan=3>
+					<td> 
+						<label for="curtailment" >Expected Curtailment Level:</label>
+					
+					</td>
+					<td>
+						<input  type="text" name="curtailment" 
+						maxlength="2" size="3" value={{avail}}>
+					</td>
+					<td>
+						<label for="random" >Create a code to retrieve values:</label>
+					</td>
+					<td>
+						<input type="text" name="random" value={% if random%}{{random}}{% else %}all{% endif %}>
+					</td>
+					
+					
+				</tr>
+				
+				<!--  Comments -->
+				<tr>
+					 <td valign="top">
+						<label for="comments">Comments *</label>
+					 </td>
+					 <td valign="top" colspan="3">
+						<textarea  name="comments" maxlength="1000" cols="45" rows="6"></textarea>
+				 </td>
+				 
+				</tr>
+				
+				
+				<!-- Last row of table: Submit -->
+				<tr colspan=5>
+				<td colspan=4>
+				</td>
+					<td style="text-align:center" align="right">
+					<input type="submit" value="Submit" class="btn btn-primary btn-large">  
+					</td>
+				</tr>
+			</table>
+		</form>
+		
+		</div>
+	</body>
+
+</html>

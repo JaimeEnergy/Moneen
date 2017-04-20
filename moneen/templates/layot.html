@@ -1,0 +1,155 @@
+﻿<html>
+
+
+	<head>
+			<title>MW Sample Appointment Form</title>
+			<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+		
+			<link href = "https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel = "stylesheet">
+			<script src = "https://code.jquery.com/jquery-1.10.2.js"></script>
+			<script src = "https://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+			
+			
+			
+    <link rel="stylesheet" type="text/css" href="/static/content/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="/static/content/site.css" />
+    <script src="/static/scripts/modernizr-2.6.2.js"></script>
+	
+				<script>
+			
+					var xx = 5;
+					function popup(arg){
+						console.log("POPUP " + arg);
+					};
+							
+							
+				</script>
+			 
+			
+		
+			
+	</head>
+
+	<body>
+	
+	<div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar">A</span>
+                    <span class="icon-bar">B</span>
+                    <span class="icon-bar">C</span>
+                <a href="/" class="navbar-brand">GENWatch</a>
+                </button>
+            </div>
+            <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+            </div>
+        </div>
+    </div>
+	
+	
+	<div class="container">
+	
+		<form name="htmlform" method="post" action="{{ url_for('process_appointment') }}" role="form">
+		<input type="hidden" name="turbine" value = "{{windfarm}}">
+			<table width="450px" style="border-collapse: collapse;">
+				<tr><td colspan=4>Turbine Details: {{windfarm}}</td></tr>
+				
+				<tr><td colspan=4>Appointment Times:</td></tr>
+				
+				<!--  -->
+				<tr colspan=4>
+						
+					<td valign="top" colspan=2>
+						<label for="start" >Start Date:</label>
+					</td>
+					<td valign="top">
+						<input  type="text" name="start" maxlength="10" size="10" id='datepicker-1'>
+					</td>
+					
+					<td valign="top" colspan=1>
+						<label for="start_time" >Time:</label>
+					</td>
+					<td align="left">
+						<!--<input type="time" name="start_time">-->
+						<select name="start_time">
+							 {% for period, time in times %}
+								<option  value="{{time}}">{{time}}</option>
+							 {% endfor %}
+						 </select>
+					</td>
+				</tr>
+ 
+				
+				<!--  -->
+				<tr style="border-bottom: 2px solid black;">
+					<td valign="top" colspan=2>
+						<label for="finish" >Finish Date:</label>
+					</td>
+					<td valign="top">
+						<input  type="text" name="finish" maxlength="10" size="10" id='datepicker-2'>
+					</td>
+					
+					<td valign="top">
+						<label for="finish_time" >Time:</label>
+					</td>
+					<td valign="top">
+						<select name="finish_time">
+							 {% for period, time in times %}
+								<option  value="{{time}}">{{time}}</option>
+							 {% endfor %}
+						 </select>
+					</td>
+				</tr>
+ 
+ 
+				<!--  -->
+				<tr><td colspan=4>Information:</td></tr>
+				<tr colspan=3>
+					<td> 
+						<label for="curtailment" >Expected Curtailment Level:</label>
+					
+					</td>
+					<td>
+						<input  type="text" name="curtailment" maxlength="2" size="3">
+					</td>
+					<td>
+						<label for="random" >Create a code to retrieve values:</label>
+					</td>
+					<td>
+						<input type="text" name="random" value={% if random%}{{random}}{% else %}all{% endif %}>
+					</td>
+					
+					
+				</tr>
+				
+				<!--  Comments -->
+				<tr>
+					 <td valign="top">
+						<label for="comments">Comments *</label>
+					 </td>
+					 <td valign="top" colspan="3">
+						<textarea  name="comments" maxlength="1000" cols="45" rows="6"></textarea>
+				 </td>
+				 
+				</tr>
+				
+				
+				<!-- Last row of table: Submit -->
+				<tr colspan=5>
+				<td colspan=4>
+				</td>
+					<td style="text-align:center" align="right">
+					<input type="submit" value="Submit" class="btn btn-primary btn-large">  
+					</td>
+				</tr>
+			</table>
+		</form>
+		
+		</div>
+		
+		<iframe src="/{{windfarm}}{% if random%}/{{random}}{% endif %}" width=1000 height=800></iframe>
+	</body>
+
+</html>

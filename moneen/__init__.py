@@ -3,7 +3,7 @@ import flask
 import bokeh
 import flask_cache
 
-from flask import Flask, g, make_response
+from flask import Flask, g, make_response, render_template, request, redirect, url_for
 from flask_cache import Cache
 import psycopg2
 import pandas as pd
@@ -13,7 +13,8 @@ import bokeh.plotting as plt
 from bokeh.charts import TimeSeries
 from bokeh.io import show, output_notebook
 from bokeh.models.formatters import DatetimeTickFormatter
-from bokeh.models import FixedTicker, HoverTool, Span
+from bokeh.models import FixedTicker, HoverTool, Span, DatetimeTicker, OpenURL, TapTool
+from bokeh.models.callbacks import CustomJS
 from bokeh.resources import CDN
 from bokeh.embed import file_html
 from urllib import parse
@@ -30,6 +31,9 @@ url = parse.urlparse(os.environ.get("DATABASE_URL", None))
 
 
 #DATABASE = 'power.db'
+
+def get_times():
+    return [(i, "{0}:{1}".format(i//2,str(i%2*3) + '0')) for i in range(48)]
 
 def p(arg):
     print(arg, file=sys.stderr)
@@ -86,24 +90,49 @@ def add_power_reading(text):
 
     return make_response("Name accepted")
 
-@cache.cached(timeout=30)
+
 @app.route('/moneen')
-def bokeh():
+@app.route('/moneen/<random>')
+def bokeh(windfarm='moneen', random=None):
 
     for rule in app.url_map.iter_rules():
         p(rule)
 
-    conn = get_db()
-    cursor = conn.cursor()
+    """
+        Create plot
+        
+    """
 
-    df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp')
-    #df.index= df.index*1000000000
-    #df.index = pd.to_datetime(source.index-1000000, utc=True)
+    TOOLS="pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
+
+    plot = plt.figure(
+        width=800, height=600,
+        x_axis_type="datetime",
+        title = "Power (kWh)",
+        tools=TOOLS,
+        responsive=True
+    )
     
+
+    """
+        Get the data for the line chart
+        - get df from db TODO: select time limit
+        - sort index and take difference
+        - get a rollwing window (each reading is 10 seconds so 180*10 = 30 min)
+    """
+    conn = get_db()
+    df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp') 
     df = df.sort_index()
     diff = df.diff()
-    
     rm = diff.rolling(window=180).mean()[180:][::60]
+
+
+    """
+        TODO: Do I need two separate data frames?
+
+
+    """
+
     source = rm.copy()
 
     source['hourly_min'] = rm.resample('H').min().reindex(df.index,method='ffill')
@@ -112,21 +141,12 @@ def bokeh():
     source['time'] = rm.index.strftime('%H:%M')
     source['percent'] = rm['power'] * (100/(4.25)*36/100)
 
-    #source = source.unstack()
     source = plt.ColumnDataSource(data=source)
 
-    #p("READINGS")
-    #p(len(source.data['power']))
-    #p(source.data['date'])
-
-    plot = plt.figure(
-        width=800, height=600,
-        x_axis_type="datetime",
-        title = "Power (kWh)"
-    )
+    
 
 
-    plot.line(
+    line = plot.line(
         x= 'timestamp', y='percent',
         source=source,
         alpha=1, color='#e24a33',
@@ -136,27 +156,6 @@ def bokeh():
     hline = Span(location=100, dimension='width', line_color='green', line_width=3)
 
     plot.renderers.extend([hline])
-
-    majorticks = [
-        date.to_datetime64().astype('datetime64[ms]').view(np.int64)
-        for date in df.index
-        if date.hour == 0
-        and date.minute == 00
-    ]
-
-    p(majorticks)
-
-    minorticks = [
-        date.to_datetime64().astype('datetime64[ms]').view(np.int64)
-        for date in df.index
-        if date.hour == 0
-        and date.minute == 0
-        and date not in majorticks
-    ]
-
-    plot.xgrid.ticker = FixedTicker(ticks=minorticks)
-
-    plot.xaxis[0].ticker = FixedTicker(ticks=majorticks)
 
     # newline not respected in ticklabels !!!
     plot.xaxis.formatter = DatetimeTickFormatter(days=["%a\n%d %b"])
@@ -173,8 +172,10 @@ def bokeh():
 
     #ts = TimeSeries(rm, x='index', y='values')
 
-    hover = HoverTool()
-    hover.tooltips  = """
+    
+
+    hover_line = HoverTool(renderers=[line])
+    hover_line.tooltips  = """
         <div>
             <span style="font-size: 15px; font-weight: bold;">@date</span>
         </div>
@@ -194,9 +195,359 @@ def bokeh():
         </table>
     """
 
-    plot.add_tools(hover)
-    return file_html(plot, CDN, "some my plot")
+    plot.add_tools(hover_line)
+    
+
+    col = None
+
+    if random:
+        random = random.lower()
+        conn = psycopg2.connect("dbname=power user=postgres password=postgres")
+        conn = get_db()
+        cursor = conn.cursor()
+        q = """select * from appointments where random = '{r}'""".format(r=random)
 
 
+        df = pd.read_sql(con=conn, sql=q)
+
+        if not df.empty:
+        
+            df['midpoint'] = df.startdate + (df.finishdate-df.startdate)/2
+            df['midpoint'] = df.midpoint.apply(lambda x: np.datetime64(x).astype('datetime64[ms]').view(np.int64))
+            df['duration'] = df.finishdate-df.startdate
+            df['height'] = 100 - (df.availability)
+            df['width'] = df.duration.apply(lambda x: x.total_seconds()*1000)
+            df['start'] = df.startdate.dt.strftime("%A, %e %B")
+            df['finish'] = df.finishdate.dt.strftime("%A, %e %B")
+            df['y'] = 100 -(df['height']/2)
+            
+
+            p(df)
+
+            #source = pd.DataFrame()
+
+            rect = plot.rect(
+
+                x = 'midpoint',
+                y = 'y',
+                height = 'height',
+                width = 'width',
+                color = 'purple',
+                source=df
+            )
+
+            from bokeh.models import ColumnDataSource
+            from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
+            source = ColumnDataSource(df)
+            columns = [
+                TableColumn(field="start", title="Start"),
+                TableColumn(field="finish", title="Finish"),
+                TableColumn(field="availability", title="Availability"),
+                #TableColumn(field=tid, title=tid) for tid in all_turbines
+            ]
+
+            table_height = len(df) * 24 + 30
+            data_table = DataTable(source=source, columns=columns,row_headers=True, width=600, height=table_height )
+            from bokeh.layouts import column
+
+            hover_rect = HoverTool(renderers=[rect])
+            hover_rect.tooltips  = """
+                <div>
+                    <span style="font-size: 15px; font-weight: bold;">@date</span>
+                </div><a href="http://www.bbc.co.uk">:
+                <table border="0" cellpadding="10">
+                    <tr>
+                        <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">Start: </span></th>
+                        <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@start</span></td>
+                    </tr>
+                    <tr>
+                        <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">End:</span></th>
+                        <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@finish</span></td>
+                    </tr>
+                    <tr>
+                        <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">Availabiolity:</span></th>
+                        <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@availability</span></td>
+                    </tr>
+                </table>
+                </a>
+            """
+            plot.add_tools(hover_rect)
+
+            url = "/appointment/{windfarm}/{random}/edit/@start".format(windfarm=windfarm,random=random)
+            taptool = plot.select(type=TapTool)
+            #taptool = rect.select(type=TapTool)
+
+            alert_js = """
+            console.log("PARENT xx: " + window.poop)
+                console.log("PARENT: " + poop(source.data['jobnumber'][source.selected["1d"].indices]))
+                console.log("cb_data:  " + source.selected["1d"].indices  );
+
+                console.log("cb_obj:  " +  source.data['jobnumber'][source.selected["1d"].indices] );
+
+                window.top.popup(5);
+            """
+            source.callback = CustomJS(
+                args = dict(source=source),
+                code = alert_js
+            )
+            #OpenURL(url=url)
+            #plot.add_tools(taptool)
+
+            col = column(plot, data_table)
+
+    if not col:
+        col = plot
+
+    plot.xaxis[0].ticker = DatetimeTicker()
+    
+    #return file_html(plot, CDN, "some my plot")
+    return file_html(col, CDN, "some my plot")
+
+@app.route("/appointment/<windfarm>/<random>/edit/", methods = ['GET', 'POST'])
+@app.route("/appointment/<windfarm>/<random>/edit/<jid>", methods = ['GET', 'POST'])
+def edit_appointment(windfarm, random, jid=None):
+
+    
+    if request.method == 'POST':
+        p(request.form)
+        #trader_email = turbine.windfarm.trader.email
+        windfarm = request.form['turbine'].capitalize()
+        jid = request.form['jid']
+        start_date = request.form['start']
+        start_time = request.form['start_time']
+
+        finish_date = request.form['finish']
+        finish_time = request.form['finish_time']
+        random = request.form['random']
+        p("RANDOM")
+        p(random)
+
+        st = start_date + " " + start_time
+        ft = finish_date + " " + finish_time
+        import datetime
+        #p(datetime.datetime.strptime(st, "%d-%m-%Y %H-%M"))
+
+        st = st.replace(":","-")
+        ft = ft.replace(":","-")
+
+        try:
+            st = datetime.datetime.strptime(st, "%d-%m-%Y %H-%M")
+            ft = datetime.datetime.strptime(ft, "%d-%m-%Y %H-%M")
+
+        except:
+            
+            st = datetime.datetime.strptime(st, "%d-%m-%y %H-%M")
+            ft = datetime.datetime.strptime(ft, "%d-%m-%y %H-%M")
+
+        st = str(int(pd.to_datetime(st, utc=True).timestamp()))
+        ft = str(int(pd.to_datetime(ft, utc=True).timestamp()))
+        
+        availability = request.form['curtailment']
+        comments = request.form['comments']
+
+        """
+
+                IF JID UPDATE
+                
+                ELSE INSERT
+
+        """
+
+        p("JID JID")
+        p(jid)
+        p(type(jid))
+
+        isjob = False
+
+        try:
+            int(jid)
+            isjob=True
+        except:
+            pass 
+
+        if isjob:
+
+            update_appointment_query = """
+                UPDATE appointments 
+                SET 
+                startdate = to_timestamp({st}),
+                finishdate = to_timestamp({ft}),
+                availability = {availability}, 
+                comments = '{comments}'
+
+                WHERE jobnumber = {jid}
+            """.format(**locals())
+
+            p(update_appointment_query)
+
+            query = update_appointment_query
+
+        else:
+
+            insert_appointment_query = """
+            INSERT INTO appointments (windfarm, startdate, finishdate, availability, comments, random)
+            VALUES ('{windfarm}', to_timestamp({st}), to_timestamp({ft}), {availability}, '{comments}', '{random}')
+        """.format(**locals())
+
+            query = insert_appointment_query
+
+        conn = get_db()
+        cursor = conn.cursor()
+
+        cursor.execute(query)
+
+        conn.commit()
+        cursor.close()
+
+        return """
+
+            <html>
+                <head>
+                    <script>
+                        window.onunload = function() {
+                            alert("appointment added");
+                        };
+                    </script>
+                </head>
+            </html>
+
+        """
+    else:
+
+    # Try to get the appointment
+
+        start, finish, st, ft, avail = '','','','',''
+        if jid:
+            q = "select * from appointments where jobnumber={jid} AND random='{random}'".format(**locals())
+            p(q)
+
+            conn = get_db()
+            cursor = conn.cursor()
+
+            cursor.execute(q)
+            row = cursor.fetchone()
+            p(row)
+            start = row[4].strftime("%d-%m-%y")
+            finish  = row[5].strftime("%d-%m-%y")
+
+            st = row[4].strftime("%H-%M")
+            ft = row[5].strftime("%H-%M")
+
+            avail = row[2]
+
+        times= get_times()
+
+        return render_template("editappointment.html", random=random, jid=jid, times=times,
+                            start=start, finish=finish, st=st, ft=ft, avail=avail, windfarm=windfarm)
+
+@app.route("/appointment/<windfarm>", methods = ['GET'])
+@app.route("/appointment/<windfarm>/<random>", methods = ['GET'])
+def appointment(windfarm, random=None):    
+    
+    """user = load_user()
+
+    if not user or not user.role == 'Owner':
+
+        return redirect(url_for('login'))
+    
+
+    turbines = user.get_user_turbines()
+
+    p(turbines)"""
+
+    p("DEF APPOINTMENT")
+
+    times = get_times()
+    
+    return render_template('layout.html',  times = times, windfarm=windfarm, random=random)
+        
+
+
+
+@app.route("/process_appointment", methods = ['POST'])
+def process_appointment():
+    """    try:
+            user = load_user()
+
+        if not user:
+            return redirect(url_for('login'))                 
+        if request.method == 'POST':
+        p(request.form)
+        turbine = user.get_turbine(request.form['turbine'])
+        assert turbine.windfarm.owner == user"""
+
+    msg = "NO MESSAGE"
+
+    if request.method == 'POST':
+        p(request.form)
+        #trader_email = turbine.windfarm.trader.email
+        windfarm = request.form['turbine'].capitalize()
+        start_date = request.form['start']
+        start_time = request.form['start_time']
+
+        finish_date = request.form['finish']
+        finish_time = request.form['finish_time']
+        random = request.form['random']
+        p("RANDOM")
+        p(random)
+
+        st = start_date + " " + start_time
+        ft = finish_date + " " + finish_time
+        import datetime
+        p(datetime.datetime.strptime(st, "%d-%m-%Y %H:%M"))
+        st = datetime.datetime.strptime(st, "%d-%m-%Y %H:%M")
+        ft = datetime.datetime.strptime(ft, "%d-%m-%Y %H:%M")
+
+        st = str(int(pd.to_datetime(st, utc=True).timestamp()))
+        ft = str(int(pd.to_datetime(ft, utc=True).timestamp()))
+        
+        availability = request.form['curtailment']
+        comments = request.form['comments']
+
+        #turbine.add_appointment(curtailment, comments, start_date, finish_date)
+
+        p("FINISHED ASSIGNMENT")
+
+        msg = """Hi Energy Traders,
+
+                A new appointment has been set at {windfarm} with the following details:
+                Start: {st} 
+                Finish: {ft}
+                Level of curtailment: {availability}
+                With the following comments:
+                {comments}
+
+                sending to {{trader_email}}
+
+                Thank You.
+        """.format(**locals())
+
+        insert_appointment_query = """
+            INSERT INTO appointments (windfarm, startdate, finishdate, availability, comments, random)
+            VALUES ('{windfarm}', to_timestamp({st}), to_timestamp({ft}), {availability}, '{comments}', '{random}')
+        """.format(**locals())
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(insert_appointment_query)
+        conn.commit()
+        cursor.close()
+            
+    return redirect(url_for('appointment', windfarm=windfarm.lower(), random=random))		
+    return msg
+
+    """            p("MESSAGE:" + msg)
+
+            import smtplib
+            server = smtplib.SMTP('smtp.gmail.com', 587)
+
+            server.starttls()
+            server.login("mathbooking@gmail.com", "Tandem17!")
+            
+            server.sendmail("mathbooking@gmail.com", [trader_email, "Jaime.Martin@Student.GCD.ie"], msg)
+            server.quit()
+            p("SUCCESS")
 
         
+    except Exception as e:
+        pj("ERROR", e)"""

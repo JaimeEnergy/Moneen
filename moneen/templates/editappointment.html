@@ -1,0 +1,179 @@
+<html>
+
+
+	<head>
+			<title>EDIT Appointment Form</title>
+			<link href = "https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel = "stylesheet">
+			<script src = "https://code.jquery.com/jquery-1.10.2.js"></script>
+			<script src = "https://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+			<script src="/static/scripts/modernizr-2.6.2.js"></script>
+			
+			<link rel="stylesheet" type="text/css" href="/static/content/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="/static/content/site.css" />
+			
+			<script>
+				<!-- https://api.jqueryui.com/datepicker/#option-minDate
+				-->
+				 $(function() {
+					$( "#datepicker-1" ).datepicker({ dateFormat: 'dd-mm-yy',
+					changeMonth: true,
+					changeYear: true,
+					yearRange: '2017:2017',
+					dateFormat : 'dd-mm-yy',
+					defaultDate: '{{start}}'
+			});
+					$( "#datepicker-1" ).datepicker("show");
+				 });
+			</script>
+			
+			<script>
+				 $(function() {
+					$( "#datepicker-2" ).datepicker({ dateFormat: 'dd-mm-yy',
+					changeMonth: true,
+					changeYear: true,
+					yearRange: '2017:2017',
+					dateFormat : 'dd-mm-yy',
+					defaultDate: '{{finish}}'
+			});
+					$( "#datepicker-2" ).datepicker("show");
+				 });
+			</script>
+	</head>
+	
+	<body>
+	
+	
+	<script>
+					
+					console.log("POPUP IS NEXT");
+					var poop = function (arg){
+						url = "/appointment/{{windfarm}}{% if random%}/{{random}}{% endif %}/edit/" +arg;
+						console.log("POPUP " + url);
+						document.getElementById('edit').src = url;
+						
+						var iframe = document.createElement('iframe');
+						iframe.frameBorder = 0;
+						iframe.width = window.width;
+						iframe.height = "550px";
+						iframe.id = "iframe";
+						iframe.src = url
+					};
+					
+					
+					$(function() { //shorthand document.ready function
+						$('#appform').on('submit', function(e) { //use on if jQuery 1.7+
+							//e.preventDefault();  //prevent form from submitting
+							//var data = $("#login_form :input").serializeArray();
+							//console.log(data); //use the console for debugging, F12 in Chrome, not alerts
+							window.parent.location.reload();
+						});
+					});
+             </script>
+		<div class="container">
+	
+		<form name="htmlform" method="post" action="{{ url_for('edit_appointment', random=random, jid=jid, windfarm=windfarm) }}" role="form" id='appform'>
+		<input type="hidden" name="turbine" value = "{{windfarm}}">
+		<input type="hidden" name="random" value={% if random%}{{random}}{% else %}all{% endif %}>
+		<input type="hidden" name="jid" value = "{{jid}}">
+			<table >
+				
+				
+				
+				
+				<!--  -->
+				<thead class="thead-inverse">
+						<tr>
+					<th valign="top">
+						<label for="start" >Start Date and Time:</label>
+					</th>
+					<th valign="top">
+						<label>Finish Date and Time</label>
+					</th>		
+					<th valign="top">
+						Avail
+					</th>
+					
+					</tr>
+					
+				</thead>
+				
+				<tr>
+				
+					<td>
+							<input  type="text" name="start" maxlength="10" size="10" id='datepicker-1' value={{start}}>
+					
+						<!--<input type="time" name="start_time">-->
+						<select name="start_time" value={{st}}>
+							<option  value="{{st}}">{{st}}</option>
+							 {% for period, time in times %}
+								<option  value="{{time}}">{{time}}</option>
+							 {% endfor %}
+						</select>
+					
+					
+					</td>
+					
+					<td>
+						<input  type="text" name="finish" maxlength="10" size="10" 
+						id='datepicker-2' value={{finish}}>
+					
+						<select name="finish_time" value={{ft}}>
+						     <option  value="{{ft}}">{{ft}}</option>
+							 {% for period, time in times %}
+								<option  value="{{time}}">{{time}}</option>
+							 {% endfor %}
+						 </select>
+					</td>
+					
+					<td>
+						<input  type="text" name="curtailment" 
+						maxlength="2" size="3" value={{avail}}>
+					</td>
+					
+					<td style="text-align:center" align="right">
+						<input type="submit" value="Submit" class="btn btn-primary btn-large">  
+					</td>
+					
+				
+				</tr>
+ 
+				
+				<!--  -->
+				
+ 
+ 
+				<!--  -->
+				
+				
+						
+					
+					
+					
+				
+				
+				<!--  Comments -->
+				<tr>
+					 <td valign="top" colspan="4">
+						<label for="comments" style="vertical-align: top;">Comments *</label>
+					
+						<textarea  name="comments" maxlength="1000" cols="41" rows="1" height="2"></textarea>
+					</td>
+					
+					
+				 
+				</tr>
+				
+				
+				<!-- Last row of table: Submit  window.parent.location.reload()-->
+				<tr colspan=5>
+				<td colspan=2>
+				</td>
+					
+				</tr>
+			</table>
+		</form>
+		
+		</div>
+	</body>
+
+</html>
