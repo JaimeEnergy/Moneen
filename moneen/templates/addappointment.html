@@ -2,7 +2,7 @@
 
 
 	<head>
-			<title>EDIT Appointment Form</title>
+			<title>ADD Appointment Form</title>
 			<link href = "https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel = "stylesheet">
 			<script src = "https://code.jquery.com/jquery-1.10.2.js"></script>
 			<script src = "https://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
@@ -53,20 +53,17 @@
 							//e.preventDefault();  //prevent form from submitting
 							//var data = $("#login_form :input").serializeArray();
 							//console.log(data); //use the console for debugging, F12 in Chrome, not alerts
-							
-							window.parent.delayedReload();
+							window.parent.location.reload();
 						});
 					});
              </script>
 		<div class="container">
 	
-		<form name="htmlform" id="htmlform" method="post" action="{{ url_for('edit_appointment', random=random, jid=jid, windfarm=windfarm) }}" role="form" id='appform'>
+		<form name="htmlform" id="htmlform" method="post" action="{{ url_for('process_appointment', random=random,  windfarm=windfarm) }}" role="form" id='appform'>
 		<input type="hidden" name="turbine" value = "{{windfarm}}">
 		<input type="hidden" name="random" value={% if random%}{{random}}{% else %}all{% endif %}>
-		<input type="hidden" name="jid" value = "{{jid}}">
-			
-			
-			
+		
+		
 			<table >
 				
 				
@@ -79,7 +76,7 @@
 						<label for="start" >Start:</label>
 					</th>
 					<th valign="top">
-						<label>Finish:</label>
+						<label>Finish</label>
 					</th>		
 					<th valign="top">
 						Availability
@@ -96,21 +93,22 @@
 				<tr>
 				
 					<td>
-							<input  type="text" name="start" maxlength="10" size="10" 
-							id='datepicker-1' class="span8" value={{start}}>					
+							<input  type="text" name="start" maxlength="10" 
+							size="10" id='datepicker-1' class="span8">
+					
 					
 					</td>
 					
 					<td>
 						<input  type="text" name="finish" maxlength="10" size="10" 
-						id='datepicker-2' class="span8" value={{finish}}>
+						id='datepicker-2' class="span8">
 					
 						
 					</td>
 					
 					<td>
 						<input  type="text" name="curtailment" 
-						maxlength="2" size="3" value={{avail}}>
+						maxlength="2" size="3" class="span14">
 					</td>
 					
 					<td style="text-align:center" align="right">
@@ -119,46 +117,40 @@
 					
 				
 				</tr>
- 
-				
-				<!--  -->
 				
 				<tr>
-				
-					<td>
-						<!--<input type="time" name="start_time">-->
-						<select name="start_time" value={{st}} class="input-large">
-							<option  value="{{st}}">{{st}}</option>
-							 {% for period, time in times %}
-								<option  value="{{time}}">{{time}}</option>
-							 {% endfor %}
-						</select>
-					</td>
-					
-					<td>
-						<select name="finish_time" value={{ft}} class="input-large">
-						     <option  value="{{ft}}">{{ft}}</option>
-							 {% for period, time in times %}
-								<option  value="{{time}}">{{time}}</option>
-							 {% endfor %}
-						</select>
-					</td>
-					
-					<td>
-					
-					</td>
-					
-					<td>
-					
-					</td>
-					
+						<td>
+							<!--<input type="time" name="start_time">-->
+							<select name="start_time"  class="input-large">
+								<option  value="{{st}}">{{st}}</option>
+								 {% for period, time in times %}
+									<option  value="{{time}}">{{time}}</option>
+								 {% endfor %}
+							</select>
+						</td>
+						
+						<td>
+							<select name="finish_time"  class="input-large">
+								 <option  value="{{ft}}">{{ft}}</option>
+								 {% for period, time in times %}
+									<option  value="{{time}}">{{time}}</option>
+								 {% endfor %}
+							 </select>
+						</td>
 				</tr>
+ 
+				
+				<!--  -->
+				
+ 
  
 				<!--  -->
 				
 				
-						
-				<tr height="15"><td colspan="3"></td><td></td></tr>		
+				<tr><td colspan="3"></td><td>
+						<input type="button" name="answer" value="Ignore" onclick="parent.top.showDiv('hide')" class="btn btn-primary btn-large"/>
+					</td></tr>		
+					
 					
 					
 				
@@ -168,18 +160,17 @@
 					 <td valign="top" colspan="3">
 						<label for="comments" style="vertical-align: top;">Comments *</label>
 					
-						<textarea  name="comments" maxlength="1000" cols="41" rows="1" height="2"></textarea>
+						<textarea  name="comments" maxlength="1000" cols="41" rows="3" height="2"></textarea>
 					</td>
+					
+					
+					
 					
 					
 				 
 				</tr>
 				
 				
-				<!-- Last row of table: Submit  window.parent.location.reload()-->
-				<tr colspan=5>
-				<td colspan=2>
-				</td>
 					
 				</tr>
 			</table>

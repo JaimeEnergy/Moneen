@@ -2,8 +2,9 @@ import os
 import flask
 import bokeh
 import flask_cache
+import datetime
 
-from flask import Flask, g, make_response, render_template, request, redirect, url_for
+from flask import Flask, g, make_response, render_template, request, redirect, url_for, session
 from flask_cache import Cache
 import psycopg2
 import pandas as pd
@@ -17,12 +18,14 @@ from bokeh.models import FixedTicker, HoverTool, Span, DatetimeTicker, OpenURL, 
 from bokeh.models.callbacks import CustomJS
 from bokeh.resources import CDN
 from bokeh.embed import file_html
+from bokeh.embed import components
 from urllib import parse
 import sys # For Printing
 
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.secret_key = 'a very secret key'
 cache = Cache(app,config={'CACHE_TYPE': 'simple'})
 
 
@@ -61,6 +64,23 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
+@app.route('/login', methods = ['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username', None)
+        password = request.form.get('password', None)
+
+ 
+        if username and (username.lower()+'123' == password):
+            session['username'] = username
+            return redirect(url_for('bokeh', random=username))
+
+        else:
+
+            flash("Incorrect username or password")
+
+    return render_template('login.html')
+
 @app.route('/pr/<text>')
 def add_power_reading(text):
     lines = text.split('!')
@@ -95,6 +115,12 @@ def add_power_reading(text):
 @app.route('/moneen/<random>')
 def bokeh(windfarm='moneen', random=None):
 
+
+    if random:
+        username = session.get('username', None)
+        if not username or username.lower() != random.lower():
+            return redirect(url_for('login'))
+
     for rule in app.url_map.iter_rules():
         p(rule)
 
@@ -112,7 +138,7 @@ def bokeh(windfarm='moneen', random=None):
         tools=TOOLS,
         responsive=True
     )
-    
+
 
     """
         Get the data for the line chart
@@ -143,9 +169,6 @@ def bokeh(windfarm='moneen', random=None):
 
     source = plt.ColumnDataSource(data=source)
 
-    
-
-
     line = plot.line(
         x= 'timestamp', y='percent',
         source=source,
@@ -155,7 +178,11 @@ def bokeh(windfarm='moneen', random=None):
 
     hline = Span(location=100, dimension='width', line_color='green', line_width=3)
 
-    plot.renderers.extend([hline])
+    import time
+    now = time.mktime(datetime.datetime.now().timetuple()) * 1000
+    vline = Span(location=now, dimension='height', line_color='red', line_width=1, line_dash=[4,4])
+
+    plot.renderers.extend([hline, vline])
 
     # newline not respected in ticklabels !!!
     plot.xaxis.formatter = DatetimeTickFormatter(days=["%a\n%d %b"])
@@ -200,9 +227,51 @@ def bokeh(windfarm='moneen', random=None):
 
     col = None
 
+    def add_outages_to_plot(plot, df):
+
+        df['midpoint'] = df.startdate + (df.finishdate-df.startdate)/2
+        df['midpoint'] = df.midpoint.apply(lambda x: np.datetime64(x).astype('datetime64[ms]').view(np.int64))
+        df['duration'] = df.finishdate-df.startdate
+        df['height'] = 100 - (df.availability)
+        df['width'] = df.duration.apply(lambda x: x.total_seconds()*1000)
+        df['start'] = df.startdate.dt.strftime("%A, %e %B %H:%M")
+        df['finish'] = df.finishdate.dt.strftime("%A, %e %B %H:%M")
+        df['y'] = 100 -(df['height']/2)
+
+        rect = plot.rect(
+
+                x = 'midpoint',
+                y = 'y',
+                height = 'height',
+                width = 'width',
+                color = 'purple',
+                source=df
+        )
+
+        return rect
+
+    def create_outages_datatable(df):
+
+        from bokeh.models import ColumnDataSource
+        from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
+        source = ColumnDataSource(df)
+        columns = [
+            TableColumn(field="start", title="Start"),
+            TableColumn(field="finish", title="Finish"),
+            TableColumn(field="availability", title="Availability"),
+            TableColumn(field="timestamp", title="Timestamp"),
+        ]
+
+        table_height = len(df) * 24 + 30
+        data_table = DataTable(source=source, columns=columns,row_headers=True, width=800, height=table_height )
+
+        return source, data_table
+
+    plot_div, dt_div, bokeh_script = '','',''
+
     if random:
         random = random.lower()
-        conn = psycopg2.connect("dbname=power user=postgres password=postgres")
+        
         conn = get_db()
         cursor = conn.cursor()
         q = """select * from appointments where random = '{r}'""".format(r=random)
@@ -211,44 +280,8 @@ def bokeh(windfarm='moneen', random=None):
         df = pd.read_sql(con=conn, sql=q)
 
         if not df.empty:
-        
-            df['midpoint'] = df.startdate + (df.finishdate-df.startdate)/2
-            df['midpoint'] = df.midpoint.apply(lambda x: np.datetime64(x).astype('datetime64[ms]').view(np.int64))
-            df['duration'] = df.finishdate-df.startdate
-            df['height'] = 100 - (df.availability)
-            df['width'] = df.duration.apply(lambda x: x.total_seconds()*1000)
-            df['start'] = df.startdate.dt.strftime("%A, %e %B")
-            df['finish'] = df.finishdate.dt.strftime("%A, %e %B")
-            df['y'] = 100 -(df['height']/2)
-            
 
-            p(df)
-
-            #source = pd.DataFrame()
-
-            rect = plot.rect(
-
-                x = 'midpoint',
-                y = 'y',
-                height = 'height',
-                width = 'width',
-                color = 'purple',
-                source=df
-            )
-
-            from bokeh.models import ColumnDataSource
-            from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
-            source = ColumnDataSource(df)
-            columns = [
-                TableColumn(field="start", title="Start"),
-                TableColumn(field="finish", title="Finish"),
-                TableColumn(field="availability", title="Availability"),
-                #TableColumn(field=tid, title=tid) for tid in all_turbines
-            ]
-
-            table_height = len(df) * 24 + 30
-            data_table = DataTable(source=source, columns=columns,row_headers=True, width=600, height=table_height )
-            from bokeh.layouts import column
+            rect = add_outages_to_plot(plot,df)
 
             hover_rect = HoverTool(renderers=[rect])
             hover_rect.tooltips  = """
@@ -271,37 +304,44 @@ def bokeh(windfarm='moneen', random=None):
                 </table>
                 </a>
             """
+
             plot.add_tools(hover_rect)
 
+            
+            
             url = "/appointment/{windfarm}/{random}/edit/@start".format(windfarm=windfarm,random=random)
             taptool = plot.select(type=TapTool)
             #taptool = rect.select(type=TapTool)
 
             alert_js = """
-            console.log("PARENT xx: " + window.poop)
-                console.log("PARENT: " + poop(source.data['jobnumber'][source.selected["1d"].indices]))
-                console.log("cb_data:  " + source.selected["1d"].indices  );
+           
+                console.log("PARENT: " + showDiv(source.data['jobnumber'][source.selected["1d"].indices]))
 
-                console.log("cb_obj:  " +  source.data['jobnumber'][source.selected["1d"].indices] );
-
-                window.top.popup(5);
+               
             """
+
+            source, data_table   = create_outages_datatable(df)
             source.callback = CustomJS(
                 args = dict(source=source),
                 code = alert_js
             )
-            #OpenURL(url=url)
-            #plot.add_tools(taptool)
 
+            from bokeh.layouts import column
             col = column(plot, data_table)
-
+            bokeh_script, comps  = components({"plot":plot,"dt":data_table})
+            plot_div, dt_div = comps['plot'], comps['dt']
+            
+            
+    
     if not col:
         col = plot
+        bokeh_script, plot_div  = components(plot)
 
     plot.xaxis[0].ticker = DatetimeTicker()
+
     
-    #return file_html(plot, CDN, "some my plot")
-    return file_html(col, CDN, "some my plot")
+    return render_template("l2.html", windfarm=windfarm, random=random, 
+        plot_div=plot_div, dt_div=dt_div, bs=bokeh_script)
 
 @app.route("/appointment/<windfarm>/<random>/edit/", methods = ['GET', 'POST'])
 @app.route("/appointment/<windfarm>/<random>/edit/<jid>", methods = ['GET', 'POST'])
@@ -332,11 +372,12 @@ def edit_appointment(windfarm, random, jid=None):
 
         try:
             st = datetime.datetime.strptime(st, "%d-%m-%Y %H-%M")
-            ft = datetime.datetime.strptime(ft, "%d-%m-%Y %H-%M")
-
         except:
-            
             st = datetime.datetime.strptime(st, "%d-%m-%y %H-%M")
+
+        try:
+            ft = datetime.datetime.strptime(ft, "%d-%m-%Y %H-%M")
+        except:
             ft = datetime.datetime.strptime(ft, "%d-%m-%y %H-%M")
 
         st = str(int(pd.to_datetime(st, utc=True).timestamp()))
@@ -365,6 +406,9 @@ def edit_appointment(windfarm, random, jid=None):
         except:
             pass 
 
+        epoch_time = datetime.datetime.now()
+        epoch_time = int(pd.to_datetime(epoch_time, utc=True).timestamp())
+
         if isjob:
 
             update_appointment_query = """
@@ -373,7 +417,8 @@ def edit_appointment(windfarm, random, jid=None):
                 startdate = to_timestamp({st}),
                 finishdate = to_timestamp({ft}),
                 availability = {availability}, 
-                comments = '{comments}'
+                comments = '{comments}',
+                timestamp = to_timestamp({epoch_time})
 
                 WHERE jobnumber = {jid}
             """.format(**locals())
@@ -385,8 +430,8 @@ def edit_appointment(windfarm, random, jid=None):
         else:
 
             insert_appointment_query = """
-            INSERT INTO appointments (windfarm, startdate, finishdate, availability, comments, random)
-            VALUES ('{windfarm}', to_timestamp({st}), to_timestamp({ft}), {availability}, '{comments}', '{random}')
+            INSERT INTO appointments (windfarm, startdate, finishdate, availability, comments, random, timestamp)
+            VALUES ('{windfarm}', to_timestamp({st}), to_timestamp({ft}), {availability}, '{comments}', '{random}', to_timestamp({epochtime}))
         """.format(**locals())
 
             query = insert_appointment_query
@@ -480,7 +525,6 @@ def process_appointment():
 
     if request.method == 'POST':
         p(request.form)
-        #trader_email = turbine.windfarm.trader.email
         windfarm = request.form['turbine'].capitalize()
         start_date = request.form['start']
         start_time = request.form['start_time']
@@ -488,8 +532,6 @@ def process_appointment():
         finish_date = request.form['finish']
         finish_time = request.form['finish_time']
         random = request.form['random']
-        p("RANDOM")
-        p(random)
 
         st = start_date + " " + start_time
         ft = finish_date + " " + finish_time
@@ -522,10 +564,18 @@ def process_appointment():
                 Thank You.
         """.format(**locals())
 
+        epoch_time = datetime.datetime.now()
+        epoch_time = str(int(pd.to_datetime(epoch_time, utc=True).timestamp()))
+        p("EPOCHT TIME")
+        p(epoch_time)
+
         insert_appointment_query = """
-            INSERT INTO appointments (windfarm, startdate, finishdate, availability, comments, random)
-            VALUES ('{windfarm}', to_timestamp({st}), to_timestamp({ft}), {availability}, '{comments}', '{random}')
+            INSERT INTO appointments (windfarm, startdate, finishdate, availability, comments, random, timestamp)
+            VALUES ('{windfarm}', to_timestamp({st}), to_timestamp({ft}), {availability}, '{comments}', '{random}', to_timestamp({epoch_time}))
         """.format(**locals())
+
+        p(insert_appointment_query)
+
 
         conn = get_db()
         cursor = conn.cursor()
@@ -551,3 +601,8 @@ def process_appointment():
         
     except Exception as e:
         pj("ERROR", e)"""
+
+
+@app.route('/add_outage/<windfarm>/<random>')
+def add_outage(windfarm, random):
+    return render_template('addappointment.html', windfarm=windfarm, random=random, times=get_times())
