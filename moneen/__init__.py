@@ -151,7 +151,7 @@ def bokeh(windfarm='moneen', random=None):
     #df.to_csv('heroku_dump')
     df = df.sort_index()
     diff = df.diff()
-    rm = diff.rolling(window=180).mean()[180:][::60]
+    rm = diff.rolling(window=180).mean()[180:][10::60]
 
 
     """
