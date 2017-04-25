@@ -52,7 +52,7 @@ Bokeh.set_log_level("info");
 						
 						setTimeout(function(){
 								location.reload();
-							}, 2800);
+							}, 800);
 						
 						console.log("parent delayed reload finished");
 					}		
@@ -60,7 +60,15 @@ Bokeh.set_log_level("info");
 				</script>
 				
 				
-			 
+		<style>
+
+			body {
+  margin: 0;
+  padding: 0;
+  border 0;	
+  height: 100%;
+}
+			</style>
 			
 		
 			
@@ -68,40 +76,64 @@ Bokeh.set_log_level("info");
 
 	<body style="width:auto ! important;">
 	
-	<div class = "page-header">
+	<div class="text-center">
    
 	   <h1 class="text-center">
-		  Example page header 
-		  <small>Subtext for header</small>
+		  Windfarm Dashboard
+			</br>
+			
+			
 	   </h1>
-	   
+	   <a href="{{url_for('logout')}}" >logout</a>
 	</div>
 	
 	
 	
 	<style>
 	.bk-data-table{
-		font-size:9px ! important;
-		align:center !important;		
+		font-size:11px ! important;
+		margin: 0 auto;		
+	}
+	
+	
+	
+	
+	
+	
+	
+	.bk-plot-layout{
+		margin: 0 auto ! important;
+	}
+	
+	
+	
+	.bk-canvas-wrapper{
+		margin: 0 auto ! important;
+		width: 100%;
+		
+	}
+	
+	.bk-canvas{
+		display: inline;
 	}
 </style>
 	
 	{{bs | safe}}
 	
 	
-	{{plot_div | safe}}
 	
-	
-	
-		{{dt_div | safe}}
+		{{plot_div | safe}}
+	</br></br>
+	{{dt_div | safe}}
 		
-		<div>
+		<div style="text-align:center;margin:auto;">
 		</br></br>
 			<input type="button" name="answer" value="Add Availability Data" onclick="showDiv('add')" />
 		</div>
 		
-		<div id='outage' style="visibility:hidden;">hidden div</br>hidden div</br>hidden div</br>hidden div</br>hidden div</br>hidden div</br>
-		<iframe id='frame' width='100%' height='250' scrolling='no'></iframe>
+		<div id='outage' style="visibility:hidden;text-align:center;margin:auto;">
+		<iframe id='frame' width=400 height='250' scrolling='no' 
+		frameBorder="0" syle="display:block;"></iframe>
 			
 		
 		</div>

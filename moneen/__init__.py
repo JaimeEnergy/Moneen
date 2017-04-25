@@ -129,12 +129,12 @@ def bokeh(windfarm='moneen', random=None):
         
     """
 
-    TOOLS="pan,wheel_zoom,box_zoom,reset,tap,box_select,lasso_select"
+    TOOLS="pan,wheel_zoom,box_zoom,reset"
 
     plot = plt.figure(
-        width=800, height=600,
+        width=800, height=200,
         x_axis_type="datetime",
-        title = "Power (kWh)",
+        #title = "Power (kWh)",
         tools=TOOLS,
         responsive=True
     )
@@ -148,6 +148,7 @@ def bokeh(windfarm='moneen', random=None):
     """
     conn = get_db()
     df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp') 
+    #df.to_csv('heroku_dump')
     df = df.sort_index()
     diff = df.diff()
     rm = diff.rolling(window=180).mean()[180:][::60]
@@ -166,6 +167,8 @@ def bokeh(windfarm='moneen', random=None):
     source['date'] = rm.index.strftime('%a %d %b')
     source['time'] = rm.index.strftime('%H:%M')
     source['percent'] = rm['power'] * (100/(4.25)*36/100)
+    source.percent.apply(lambda x: min(x, 100))
+    source.percent.apply(lambda x: max(x, 0))
 
     source = plt.ColumnDataSource(data=source)
 
@@ -190,12 +193,12 @@ def bokeh(windfarm='moneen', random=None):
     plot.xgrid.band_fill_color = "grey"
     plot.xgrid.band_fill_alpha = 0.05
 
-    plot.xaxis.axis_label = 'Date'
-    plot.xaxis.axis_label_text_font_size = "12pt"
-    plot.yaxis.axis_label = '% MWh'
-    plot.yaxis.axis_label_text_font_size = "12pt"
-
-    plot.legend.location = "bottom_right"
+    #plot.xaxis.axis_label = 'Date'
+    plot.xaxis.axis_label_text_font_size = "11pt"
+    plot.yaxis.axis_label = '% Power'
+    plot.yaxis.axis_label_text_font_size = "11pt"
+    plot.yaxis.axis_label_text_font_style = "normal"
+    #plot.legend.location = "bottom_right"
 
     #ts = TimeSeries(rm, x='index', y='values')
 
@@ -204,20 +207,20 @@ def bokeh(windfarm='moneen', random=None):
     hover_line = HoverTool(renderers=[line])
     hover_line.tooltips  = """
         <div>
-            <span style="font-size: 15px; font-weight: bold;">@date</span>
+            <span style="font-size: 15px; font-weight: bold;">@time</span>
         </div>
         <table border="0" cellpadding="10">
             <tr>
-                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@time: </span></th>
-                <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@power</span></td>
+                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">1/2-hourly average: </span></th>
+                <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@power MW</span></td>
             </tr>
             <tr>
-                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">hourly_min:</span></th>
-                <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@hourly_min</span></td>
+                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">1/2-hourly_min:</span></th>
+                <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@hourly_min MW</span></td>
             </tr>
             <tr>
-                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">hourly_max:</span></th>
-                <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@hourly_max</span></td>
+                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">1/2-hourly_max:</span></th>
+                <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@hourly_max MW</span></td>
             </tr>
         </table>
     """
@@ -258,12 +261,12 @@ def bokeh(windfarm='moneen', random=None):
         columns = [
             TableColumn(field="start", title="Start"),
             TableColumn(field="finish", title="Finish"),
-            TableColumn(field="availability", title="Availability"),
-            TableColumn(field="timestamp", title="Timestamp"),
+            TableColumn(field="availability", title="% Available"),
+            TableColumn(field="timestamp", title="Updated At"),
         ]
 
         table_height = len(df) * 24 + 30
-        data_table = DataTable(source=source, columns=columns,row_headers=True, width=800, height=table_height )
+        data_table = DataTable(source=source, columns=columns,row_headers=True, width=770, height=table_height )
 
         return source, data_table
 
@@ -291,14 +294,14 @@ def bokeh(windfarm='moneen', random=None):
                 <table border="0" cellpadding="10">
                     <tr>
                         <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">Start: </span></th>
-                        <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@start</span></td>
+                        <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@start MWh</span></td>
                     </tr>
                     <tr>
                         <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">End:</span></th>
                         <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@finish</span></td>
                     </tr>
                     <tr>
-                        <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">Availabiolity:</span></th>
+                        <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">% Available:</span></th>
                         <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@availability</span></td>
                     </tr>
                 </table>
@@ -583,8 +586,9 @@ def process_appointment():
         conn.commit()
         cursor.close()
             
-    return redirect(url_for('appointment', windfarm=windfarm.lower(), random=random))		
-    return msg
+    #return redirect(url_for('appointment', windfarm=windfarm.lower(), random=random))		
+    #return msg
+    return "Success!"
 
     """            p("MESSAGE:" + msg)
 
@@ -604,5 +608,11 @@ def process_appointment():
 
 
 @app.route('/add_outage/<windfarm>/<random>')
-def add_outage(windfarm, random):
+def add_outage(windfarm, random=None):
     return render_template('addappointment.html', windfarm=windfarm, random=random, times=get_times())
+
+
+@app.route('/logout')
+def logout():
+    session.pop('username')
+    return redirect(url_for('login'))

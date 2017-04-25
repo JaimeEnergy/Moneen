@@ -11,9 +11,31 @@
 			<link rel="stylesheet" type="text/css" href="/static/content/bootstrap.min.css" />
     <link rel="stylesheet" type="text/css" href="/static/content/site.css" />
 			
+			
+			<script>
+				 function showFinish(){
+				 
+					$(function() {
+						$( "#datepicker-2" ).datepicker({ dateFormat: 'dd-mm-yy',
+						changeMonth: true,
+						changeYear: true,
+						yearRange: '2017:2017',
+						dateFormat : 'dd-mm-yy',
+						defaultDate: '{{finish}}'
+														});
+						$( "#datepicker-2" ).datepicker("show");
+				 });
+				 }
+			</script>
+			
+			
 			<script>
 				<!-- https://api.jqueryui.com/datepicker/#option-minDate
 				-->
+				 
+				 
+				 function showStart(){
+				 
 				 $(function() {
 					$( "#datepicker-1" ).datepicker({ dateFormat: 'dd-mm-yy',
 					changeMonth: true,
@@ -21,23 +43,19 @@
 					yearRange: '2017:2018',
 					dateFormat : 'dd-mm-yy',
 					defaultDate: '{{start}}'
+					
 			});
-					$( "#datepicker-1" ).datepicker("show");
-				 });
-			</script>
 			
-			<script>
-				 $(function() {
-					$( "#datepicker-2" ).datepicker({ dateFormat: 'dd-mm-yy',
-					changeMonth: true,
-					changeYear: true,
-					yearRange: '2017:2017',
-					dateFormat : 'dd-mm-yy',
-					defaultDate: '{{finish}}'
-			});
-					$( "#datepicker-2" ).datepicker("show");
+					$( "#datepicker-1" ).datepicker("show");
+					
 				 });
-			</script>
+				 
+				 
+				
+			}
+			</script>>
+			
+			
 	</head>
 	
 	<body>
@@ -97,13 +115,15 @@
 				
 					<td>
 							<input  type="text" name="start" maxlength="10" size="10" 
-							id='datepicker-1' class="span8" value={{start}}>					
+							id='datepicker-1' class="span8" value={{start}}
+							onclick="showStart();">					
 					
 					</td>
 					
 					<td>
 						<input  type="text" name="finish" maxlength="10" size="10" 
-						id='datepicker-2' class="span8" value={{finish}}>
+						id='datepicker-2' class="span8" value={{finish}}
+						onclick="showFinish();">
 					
 						
 					</td>
@@ -166,7 +186,7 @@
 				<!--  Comments -->
 				<tr>
 					 <td valign="top" colspan="3">
-						<label for="comments" style="vertical-align: top;">Comments *</label>
+						<label for="comments" style="vertical-align: top;">Comments</label>
 					
 						<textarea  name="comments" maxlength="1000" cols="41" rows="1" height="2"></textarea>
 					</td>
