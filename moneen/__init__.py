@@ -198,7 +198,7 @@ def bokeh(windfarm='moneen', random=None):
     plot.yaxis.axis_label = '% Power'
     plot.yaxis.axis_label_text_font_size = "11pt"
     plot.yaxis.axis_label_text_font_style = "normal"
-    #plot.legend.location = "bottom_right"
+    plot.legend.location = "top_left"
 
     #ts = TimeSeries(rm, x='index', y='values')
 
