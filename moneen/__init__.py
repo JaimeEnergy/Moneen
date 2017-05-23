@@ -89,7 +89,7 @@ def login():
 def add_power_reading(text):
     lines = text.split('!')
     conn = get_db()
-    conn.autocommit = True
+    conn.autocommit = False
     cursor = conn.cursor()
     # timestamp to timestamp
     #timestamp = datetime.datetime.strptime(timestamp,'%d-%m-%Y-%H:%M:%S')
@@ -111,7 +111,7 @@ def add_power_reading(text):
             """.format(timestamp=timestamp, power=power, power2=power)
         #p(sql)
         cursor.execute(sql)
-    conn.commit()
+    p(conn.commit())
     p("inserted")
 
         
