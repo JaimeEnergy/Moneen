@@ -105,13 +105,13 @@ def add_power_reading(text):
 
         sql = """
             INSERT INTO ActivePower(Timestamp, Power) VALUES(to_timestamp({timestamp}), {power})
-            ON CONFLICT (Timestamp) DO UPDATE
+            ON CONFLICT  DO UPDATE
             SET Power = {power2};
             """.format(timestamp=timestamp, power=power, power2=power)
-        p(sql)
+        #p(sql)
         cursor.execute(sql)
-        conn.commit()
-        p("inserted")
+    conn.commit()
+    p("inserted")
 
         
     cursor.close()
