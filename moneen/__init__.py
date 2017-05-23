@@ -150,7 +150,7 @@ def bokeh(windfarm='moneen', random=None):
     """
 
     TOOLS="pan,wheel_zoom,box_zoom,reset"
-    TOOLS="wheel_zoom,box_zoom,reset"
+    #TOOLS="wheel_zoom,box_zoom,reset"
 
     plot = plt.figure(
         width=800, height=200,
