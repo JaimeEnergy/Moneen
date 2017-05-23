@@ -99,10 +99,10 @@ def add_power_reading(text):
 
         # get power table
 
-        sql = f"""
+        sql = """
             INSERT INTO ActivePower(Timestamp, Power) VALUES(to_timestamp({timestamp}), {power})
             ON CONFLICT DO NOTHING
-            """
+            """.format(timestamp=timestamp, power=power)
         cursor.execute(sql)
 
     conn.commit()
@@ -130,6 +130,7 @@ def bokeh(windfarm='moneen', random=None):
     """
 
     TOOLS="pan,wheel_zoom,box_zoom,reset"
+    TOOLS="wheel_zoom,box_zoom,reset"
 
     plot = plt.figure(
         width=800, height=200,
@@ -266,7 +267,8 @@ def bokeh(windfarm='moneen', random=None):
         ]
 
         table_height = len(df) * 24 + 30
-        data_table = DataTable(source=source, columns=columns,row_headers=True, width=770, height=table_height )
+        data_table = DataTable(source=source, columns=columns,row_headers=True, width=770, height=table_height,
+          sizing_mode='scale_both' )
 
         return source, data_table
 

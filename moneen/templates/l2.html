@@ -17,10 +17,12 @@
 				
 				<script src="http://cdn.pydata.org/bokeh/release/bokeh-0.12.5.min.js"></script>
 				<script src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.5.min.js"></script>
-				
+				<script src="/static/dist/jquery.gridster.js" type="text/javascript" charset="utf-8"></script>
+				<link rel="stylesheet" href="/static/dist/styles.css">
+				<link rel="stylesheet" type="text/css" href="/static/dist/jquery.gridster.min.css">
 				<script type="text/javascript">
-Bokeh.set_log_level("info");
-</script>
+					Bokeh.set_log_level("info");
+				</script>
 				
 	
 				<script>
@@ -125,23 +127,53 @@ Bokeh.set_log_level("info");
 	
 	{{bs | safe}}
 	
-	
+	<div class="gridster">
 	
 		{{plot_div | safe}}
-	</br></br>
-	{{dt_div | safe}}
+		
+	
+	
+
+	
+	
+		
+		
+		{{dt_div | safe}}
+		
+		
 		
 		<div style="text-align:center;margin:auto;">
 		</br></br>
 			<input type="button" name="answer" value="Add Availability Data" onclick="showDiv('add')" />
+		
+		
 		</div>
 		
+		</br>
+		
 		<div id='outage' style="visibility:hidden;text-align:center;margin:auto;">
+		
+		
 		<iframe id='frame' width=430 height='250' scrolling='no' 
 		frameBorder="0" syle="display:block;"></iframe>
 			
 		
 		</div>
+		
+		
+	
+			
+		<!--<li data-row="4" data-col="1" data-sizex="2" data-sizey="1">
+			<img src="/static/img/d1.jpg" width=100% height=100%>
+		</li>-->
+		
+		</div>
+		
+	
+		
+		
+      
+</script>
 	</body>
 
 </html>
