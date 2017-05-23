@@ -37,6 +37,7 @@ parse.uses_netloc.append("postgres")
 url = parse.urlparse(os.environ.get("DATABASE_URL", None))
 p("DB URL")
 p(url)
+p("DB URL ABOVE")
 
 
 #DATABASE = 'power.db'
