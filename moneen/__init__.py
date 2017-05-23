@@ -126,7 +126,7 @@ def add_power_reading(text):
 @app.route('/moneen')
 @app.route('/moneen/<random>')
 def bokeh(windfarm='moneen', random=None):
-
+    p("BOKEH")
 
     if random:
         username = session.get('username', None)
@@ -158,7 +158,10 @@ def bokeh(windfarm='moneen', random=None):
         - sort index and take difference
         - get a rollwing window (each reading is 10 seconds so 180*10 = 30 min)
     """
+    p("GET CONN")
     conn = get_db()
+
+    p("GOT CONN")
     df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp')
     p(df.shape)
 
