@@ -105,7 +105,7 @@ def add_power_reading(text):
 
         sql = """
             INSERT INTO ActivePower(Timestamp, Power) VALUES(to_timestamp({timestamp}), {power})
-            ON CONFLICT  DO UPDATE
+            ON CONFLICT (Timestamp)  DO UPDATE
             SET Power = {power2};
             """.format(timestamp=timestamp, power=power, power2=power)
         #p(sql)
