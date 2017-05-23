@@ -111,7 +111,7 @@ def add_power_reading(text):
             ON CONFLICT (Timestamp)  DO UPDATE
             SET Power = {power2};
             """.format(timestamp=timestamp, power=power, power2=power)
-        #p(sql)
+        p(sql)
         cursor.execute(sql)
         conn.commit()
     p("inserted")
