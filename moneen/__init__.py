@@ -101,7 +101,8 @@ def add_power_reading(text):
 
         sql = """
             INSERT INTO ActivePower(Timestamp, Power) VALUES(to_timestamp({timestamp}), {power})
-            ON CONFLICT DO NOTHING
+            ON CONFLICT (Timestamp) DO UPDATE
+            SET Power = {{power}}
             """.format(timestamp=timestamp, power=power)
         p(sql)
         cursor.execute(sql)
@@ -123,8 +124,7 @@ def bokeh(windfarm='moneen', random=None):
         if not username or username.lower() != random.lower():
             return redirect(url_for('login'))
 
-    for rule in app.url_map.iter_rules():
-        p(rule)
+    
 
     """
         Create plot
@@ -150,7 +150,9 @@ def bokeh(windfarm='moneen', random=None):
         - get a rollwing window (each reading is 10 seconds so 180*10 = 30 min)
     """
     conn = get_db()
-    df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp') 
+    df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp')
+    p(df.shape)
+
     #df.to_csv('heroku_dump')
     df = df.sort_index()
     diff = df.diff()
