@@ -103,9 +103,9 @@ def add_power_reading(text):
             INSERT INTO ActivePower(Timestamp, Power) VALUES(to_timestamp({timestamp}), {power})
             ON CONFLICT DO NOTHING
             """.format(timestamp=timestamp, power=power)
-        print~(sql)
+        p(sql)
         cursor.execute(sql)
-        print("inserted")
+        p("inserted")
 
     conn.commit()
     cursor.close()
