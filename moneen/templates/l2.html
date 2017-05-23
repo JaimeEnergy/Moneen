@@ -78,7 +78,7 @@
 
 	<body style="width:auto ! important;">
 
-	<img src="{{ url_for('static', filename='gw.png')}}" width="120px" height="30px" 
+	<img src="{{ url_for('static', filename='gw.png')}}" width="120px" height="30px"
 	style=”float: left; padding: 10px 10px 10px 23px;”>
 
 	<div class="text-center">
@@ -92,6 +92,7 @@
 
 	   </h1>
 	   <a href="{{url_for('logout')}}" >logout</a>
+     </br>
 	</div>
 
 
@@ -127,13 +128,13 @@
 
 	{{bs | safe}}
 
-	<div class="gridster">
+	<div >
 
 		{{plot_div | safe}}
 
 
 
-
+    </br>
 
 
 
