@@ -167,10 +167,10 @@ def bokeh(windfarm='moneen', random=None):
         - sort index and take difference
         - get a rollwing window (each reading is 10 seconds so 180*10 = 30 min)
     """
-    p("GET CONN")
+    #p("GET CONN")
     conn = get_db()
 
-    p("GOT CONN")
+    #p("GOT CONN")
     df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp')
     
 
@@ -179,8 +179,8 @@ def bokeh(windfarm='moneen', random=None):
     diff = df.diff()
     rm = diff.rolling(window=180).mean()[180:][10::60]
 
-    p(rm.shape)
-    p(rm.head())
+    #p(rm.shape)
+    #p(rm.head())
 
 
     """
