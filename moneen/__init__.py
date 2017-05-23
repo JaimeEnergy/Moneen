@@ -88,9 +88,9 @@ def login():
 @app.route('/pr/<text>')
 def add_power_reading(text):
     lines = text.split('!')
-    conn = get_db()
-    conn.autocommit = False
-    cursor = conn.cursor()
+    
+    #conn.autocommit = False
+    
     # timestamp to timestamp
     #timestamp = datetime.datetime.strptime(timestamp,'%d-%m-%Y-%H:%M:%S')
 
@@ -100,6 +100,8 @@ def add_power_reading(text):
     insert_query = None
 
     for line in lines:
+        conn = get_db()
+        cursor = conn.cursor()
         timestamp, power = line.split('-')
 
         # get power table
@@ -111,7 +113,7 @@ def add_power_reading(text):
             """.format(timestamp=timestamp, power=power, power2=power)
         #p(sql)
         cursor.execute(sql)
-    p(conn.commit())
+        conn.commit()
     p("inserted")
 
         
