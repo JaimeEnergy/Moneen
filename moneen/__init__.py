@@ -61,6 +61,15 @@ def get_db():
         except:
             p("LOCAL DB")
             db =  psycopg2.connect("dbname=power user=postgres password=postgres")
+
+        db = g._database =  psycopg2.connect(
+                                            database='d47m4vio2038al',
+                                            user='dztqxaluqjeuhg',
+                                            password='6bc78f4cde53d5eb1f189b3902c365f7646d8f6d58d1a944f84ce2b5777b7749',
+                                            host='ec2-54-83-26-65.compute-1.amazonaws.com',
+                                            port=5432
+                                        )
+        
     return db
 
 @app.teardown_appcontext
@@ -163,12 +172,15 @@ def bokeh(windfarm='moneen', random=None):
 
     p("GOT CONN")
     df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp')
-    p(df.shape)
+    
 
     #df.to_csv('heroku_dump')
     df = df.sort_index()
     diff = df.diff()
     rm = diff.rolling(window=180).mean()[180:][10::60]
+
+    p(rm.shape)
+    p(rm.head())
 
 
     """
@@ -184,8 +196,10 @@ def bokeh(windfarm='moneen', random=None):
     source['date'] = rm.index.strftime('%a %d %b')
     source['time'] = rm.index.strftime('%H:%M')
     source['percent'] = rm['power'] * (100/(4.25)*36/100)
-    source.percent.apply(lambda x: min(x, 100))
-    source.percent.apply(lambda x: max(x, 0))
+    source['percent'] = source.percent.apply(lambda x: min(x, 100))
+    source['percent'] = source.percent.apply(lambda x: max(x, 0))
+
+    
 
     source = plt.ColumnDataSource(data=source)
 
