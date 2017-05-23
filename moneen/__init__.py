@@ -31,6 +31,8 @@ cache = Cache(app,config={'CACHE_TYPE': 'simple'})
 
 parse.uses_netloc.append("postgres")
 url = parse.urlparse(os.environ.get("DATABASE_URL", None))
+p("DB URL")
+p(url)
 
 
 #DATABASE = 'power.db'
@@ -106,9 +108,10 @@ def add_power_reading(text):
             """.format(timestamp=timestamp, power=power, power2=power)
         p(sql)
         cursor.execute(sql)
+        conn.commit()
         p("inserted")
 
-    conn.commit()
+        
     cursor.close()
 
     return make_response("Name accepted")
