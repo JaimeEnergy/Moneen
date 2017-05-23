@@ -23,6 +23,10 @@ from urllib import parse
 import sys # For Printing
 
 
+def p(arg):
+    print(arg, file=sys.stderr)
+
+
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.secret_key = 'a very secret key'
@@ -40,8 +44,6 @@ p(url)
 def get_times():
     return [(i, "{0}:{1}".format(i//2,str(i%2*3) + '0')) for i in range(48)]
 
-def p(arg):
-    print(arg, file=sys.stderr)
 
 
 def get_db():
