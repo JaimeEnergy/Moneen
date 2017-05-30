@@ -120,8 +120,7 @@ def add_power_reading(text):
 
         sql = """
             INSERT INTO ActivePower(Timestamp, Power) VALUES(to_timestamp({timestamp}), {power})
-            ON CONFLICT (Timestamp)  DO UPDATE
-            SET Power = {power2};
+            ON CONFLICT (Timestamp)  DO NOTHING;
             """.format(timestamp=timestamp, power=power, power2=power)
         p(sql)
         cursor.execute(sql)
@@ -173,13 +172,14 @@ def bokeh(windfarm='moneen', random=None):
     conn = get_db()
 
     #p("GOT CONN")
-    df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp')
+    #df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp')
+    source = pd.read_sql(con=conn, sql='select * from source', index_col='timestamp')
     
 
     #df.to_csv('heroku_dump')
-    df = df.sort_index()
-    diff = df.diff()
-    rm = diff.rolling(window=180).mean()[180:][10::60]
+    #df = df.sort_index()
+    #diff = df.diff()
+    #rm = diff.rolling(window=180).mean()[180:][10::60]
 
     #p(rm.shape)
     #p(rm.head())
@@ -191,15 +191,27 @@ def bokeh(windfarm='moneen', random=None):
 
     """
 
-    source = rm.copy()
+    #source = rm.copy()
 
-    source['hourly_min'] = rm.resample('H').min().reindex(df.index,method='ffill')
+    """
+        
+        CREATE TABLE source (
+            Timestamp timestamp PRIMARY KEY,
+            hourly_min real NOT NULL,
+            hourly_max real NOT NULL,
+            date text NOT NULL,
+            time text NOT NULL,
+            percent real NOT NULL);
+
+    """
+
+    """source['hourly_min'] = rm.resample('H').min().reindex(df.index,method='ffill')
     source['hourly_max'] = rm.resample('H').max().reindex(df.index,method='ffill')
     source['date'] = rm.index.strftime('%a %d %b')
     source['time'] = rm.index.strftime('%H:%M')
     source['percent'] = rm['power'] * (100/(4.25)*36/100)
     source['percent'] = source.percent.apply(lambda x: min(x, 100))
-    source['percent'] = source.percent.apply(lambda x: max(x, 0))
+    source['percent'] = source.percent.apply(lambda x: max(x, 0))"""
 
     
 
@@ -221,7 +233,7 @@ def bokeh(windfarm='moneen', random=None):
     plot.renderers.extend([hline, vline])
 
     # newline not respected in ticklabels !!!
-    plot.xaxis.formatter = DatetimeTickFormatter(days=["%a\n%d %b"])
+    plot.xaxis.formatter = DatetimeTickFormatter(days=["%a %d %b"])
 
     plot.xgrid.band_fill_color = "grey"
     plot.xgrid.band_fill_alpha = 0.05
