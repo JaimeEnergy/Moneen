@@ -98,6 +98,8 @@ def login():
 @app.route('/pr/<text>')
 def add_power_reading(text):
     lines = text.split('!')
+
+    p("CHANGED DB")
     
     #conn.autocommit = False
     
