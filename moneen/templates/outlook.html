@@ -12,7 +12,7 @@
 
 				<link   href="http://cdn.pydata.org/bokeh/release/bokeh-0.12.5.min.css"     rel="stylesheet" type="text/css">
 				<link
-    href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.5.min.css"
+    href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.6.min.css"
     rel="stylesheet" type="text/css">
 
 				<script src="http://cdn.pydata.org/bokeh/release/bokeh-0.12.6.min.js"></script>
@@ -27,7 +27,7 @@
 
 				<script>
 
-					var xx = 55555;
+
 
 					function showDiv(arg) {
 					console.log("IN FUNCTION SHOW DIV " + arg);
@@ -40,6 +40,17 @@
 						} else if(arg==='hide'){
 							document.getElementById('outage').style.visibility = "hidden";
 							document.getElementById('frame').src ='';
+						} else if(arg==='calendar'){
+              url = '{{url_for("static", filename="FullCalendar/calendardemo7.html")}}';
+              document.getElementById('cal_frame').src = url;
+							console.log("url for cal  " + url);
+
+              url =  '{{url_for('add_outage', windfarm=windfarm, random=random)}}';
+              document.getElementById('frame').src = url;
+							console.log("url for iframe  " + url);
+
+              document.getElementById('outage').style.visibility = "visible";
+              document.getElementById('calendar').style.visibility = "visible";
 						} else if(arg >= 0){
 							url = '{{url_for("edit_appointment", windfarm=windfarm, random=random)}}'  + arg;
 							console.log(url);
@@ -79,21 +90,19 @@
 	<body style="width:auto ! important;">
 
 	<img src="{{ url_for('static', filename='gw.png')}}" width="120px" height="30px"
-	style=”absolute: left; padding: 10px 10px 10px 23px;”>
+	style=”float: left; padding: 10px 10px 10px 23px;”>
 
 	<div class="text-center">
 
 
 
 	   <h1 class="text-center">
-		  Moneenatieve Dashboard
+		  Windfarm Dashboard
 			</br>
 
 
 	   </h1>
-	   <a href="{{url_for('logout')}}" style="position:absolute;
-   top:0;
-   right:0;">logout</a>
+	   <a href="{{url_for('logout')}}" >logout</a>
      </br></br></br>
 	</div>
 
@@ -128,25 +137,9 @@
 	}
 </style>
 
-
-
-
-
-
-<!--<li data-row="4" data-col="1" data-sizex="2" data-sizey="1">
-  <img src="/static/img/d1.jpg" width=100% height=100%>
-</li>-->
-
-</div>
-
-
 	{{bs | safe}}
 
 	<div >
-
-    <div>legend</div>
-
-    {{legend_div | safe}}
 
 		{{plot_div | safe}}
 
@@ -163,8 +156,8 @@
 
 		<div style="text-align:center;margin:auto;">
 		</br></br>
-			<input type="button" name="answer" value="Add Availability Data" onclick="showDiv('add')" />
-
+			<input type="button" name="availability" value="Add Availability Data" onclick="showDiv('add')" />
+      <input type="button" name="calendar" value=" Add  Calendar  Data " onclick="showDiv('calendar')" />
 
 		</div>
 
@@ -173,14 +166,31 @@
 		<div id='outage' style="visibility:hidden;text-align:center;margin:auto;">
 
 
-		<iframe id='frame' width=430 height='250' scrolling='no'
+		<iframe id='frame' width=430 height='300' scrolling='no'
+		frameBorder="0" syle="display:block;"></iframe>
+
+
+		</div>
+
+    <div id='calendar' style="visibility:hidden;text-align:center;margin:auto;">
+
+
+		<iframe id='cal_frame' width=430 height='650' scrolling='no'
 		frameBorder="0" syle="display:block;"></iframe>
 
 
 		</div>
 
 
-    <div>legend again</div>
+
+
+		<!--<li data-row="4" data-col="1" data-sizex="2" data-sizey="1">
+			<img src="/static/img/d1.jpg" width=100% height=100%>
+		</li>-->
+
+		</div>
+
+
 
 
 

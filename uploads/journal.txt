@@ -1,0 +1,36 @@
+jbednar anaconda cloud notebook (datashader) 
+iframe noborder 
+test calling parent function from iframe 
+	-> 3 frames 
+		-> appointment 
+		-> data 
+		-> chart 
+	-> onclick fill apppointment 
+	-> appointment add new, edit, delete BUTTONS 
+	-> onsubmit edit compare details page 
+	-> onsubmit edit/new/delete refresh all pages 
+	-> check graphs on postgre and sqlie db's use most accurate to update heroku 
+	-> push to heroku 
+	-> blueprints
+
+directories: windfarm/year/month 
+windrose: 
+	-> done for testing 
+	-> update windrose.py 
+	-> add to moneen 
+	-> add blueprint
+	-> m/s
+gantt: 
+	-> convert to jinja2 template 
+	-> set y-range 
+	-> wind and speed 
+stacked chart 
+	-> remove running 
+	-> add 97% line
+pivot 
+	-> needs to be previous 12 months
+	-> combine turbine control
+scatterplot
+print energypro project or gistlab
+remit email
+validation email

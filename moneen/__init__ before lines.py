@@ -14,7 +14,7 @@ import bokeh.plotting as plt
 from bokeh.charts import TimeSeries
 from bokeh.io import show, output_notebook
 from bokeh.models.formatters import DatetimeTickFormatter
-from bokeh.models import FixedTicker, HoverTool, Span, DatetimeTicker, OpenURL, TapTool, Legend
+from bokeh.models import FixedTicker, HoverTool, Span, DatetimeTicker, OpenURL, TapTool
 from bokeh.models.callbacks import CustomJS
 from bokeh.resources import CDN
 from bokeh.embed import file_html
@@ -30,16 +30,6 @@ def p(arg):
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config["EXPLAIN_TEMPLATE_LOADING"] = True
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-
-ALLOWED_EXTENSIONS = set(['txt','csv','xlsx'])
-
-def allowed_file(filename):
-    p("CHECK FILE ALLOWED" + '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS)
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 app.secret_key = 'a very secret key'
@@ -65,38 +55,6 @@ def get_times():
     Set up the database
     Provide teardown for after request
 """
-
-@app.route('/upload', methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        p("UPLOAD FILE POST" )
-        p(str(request.files))
-        # check if the post request has the file part
-        if 'file' not in request.files:
-            p('No file part')
-            return 'gggg'
-            return redirect(request.url)
-        file = request.files['file']
-        # if user does not select file, browser also
-        # submit a empty part without filename
-        if file.filename == '':
-            p('No selected file')
-            return 'ffff'
-            return redirect(request.url)
-        if file and allowed_file(file.filename):
-            #filename = secure_filename(file.filename)
-            p(str(file.filename))
-            path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-            p(path)
-            file.save(path)
-
-            with open(path, 'r') as f:
-                for line in f.readlines():
-                    p(line)
-            return 'uploaded: ' + str(file.filename)
-    
-    else:
-        return(render_template('upload.html'))
 
 def get_db():
     db = getattr(g, '_database', None)
@@ -155,17 +113,16 @@ def login():
 
 
 @app.route('/moneen')
-@app.route('/moneen/<user>')
-@app.route('/moneen/<user>/outlook/<outlook>')
-def bokehs(windfarm='moneen', user='', outlook=False):
+@app.route('/moneen/<random>')
+@app.route('/moneen/<random>/outlook/<outlook>')
+def bokeh(windfarm='moneen', random=None, outlook=False):
     p("BOKEH outlook " + str(outlook))
 
-    
-    username = session.get('username', None)
-    username = session.get('username', '')
-    if not username or username.lower() != user.lower():
-        #return redirect(url_for('login'))
-        pass
+    if random:
+        username = session.get('username', None)
+        if not username or username.lower() != random.lower():
+            return redirect(url_for('login'))
+
     
 
     """
@@ -184,16 +141,7 @@ def bokehs(windfarm='moneen', user='', outlook=False):
         responsive=True
     )
 
-    plot = plt.figure(
-        width=600, height=200,
-        x_axis_type="datetime",
-        #title = "Power (kWh)",
-        tools=TOOLS,
-        responsive=True,
-        toolbar_location="above"
-    )
 
-    plot.xaxis[0].ticker = DatetimeTicker()
     """
         Get the data for the line chart
         - get df from db TODO: select time limit
@@ -205,22 +153,28 @@ def bokehs(windfarm='moneen', user='', outlook=False):
 
     #p("GOT CONN")
     #df = pd.read_sql(con=conn, sql='select * from activepower', index_col='timestamp')
-    power_df = pd.read_sql(con=conn, sql='select * from source order by timestamp')
-    power_df['setpoint'] = 100
+    source = pd.read_sql(con=conn, sql='select * from source', index_col='timestamp')
+    
+
 
     
 
-    
+    source = plt.ColumnDataSource(data=source)
 
-    #hline = Span(location=100, dimension='width', line_color='green', line_width=3)
+    line = plot.line(
+        x= 'timestamp', y='percent',
+        source=source,
+        alpha=1, color='#e24a33',
+        line_width=2, legend = 'Power (MWh)'
+    )
 
-    
+    hline = Span(location=100, dimension='width', line_color='green', line_width=3)
 
     import time
     now = time.mktime(datetime.datetime.now().timetuple()) * 1000
     vline = Span(location=now, dimension='height', line_color='red', line_width=1, line_dash=[4,4])
 
-    plot.renderers.extend([vline])
+    plot.renderers.extend([hline, vline])
 
     # newline not respected in ticklabels !!!
     plot.xaxis.formatter = DatetimeTickFormatter(days=["%a %d %b"])
@@ -239,256 +193,136 @@ def bokehs(windfarm='moneen', user='', outlook=False):
 
     
 
-    
-    
-
-    col = None
-
-    
-
-    def create_outages_datatable(df):
-
-        #p("datatable columns\n"+df.columns)
-
-        from bokeh.models import ColumnDataSource
-        from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
-        datefmt = DateFormatter(format="dd M yy h:mm")
-        source = ColumnDataSource(df)
-        columns = [
-            TableColumn(field="startdate", title="Start",formatter=datefmt),
-            TableColumn(field="finishdate", title="Finish",formatter=datefmt),
-            TableColumn(field="availability", title="% Available"),
-            TableColumn(field="timestamp", title="Updated At",formatter=datefmt),
-        ]
-
-        table_height = len(df) * 24 + 30
-        data_table = DataTable(source=source, columns=columns,row_headers=True, width=600, height=table_height,
-          sizing_mode='scale_both' )
-
-        return source, data_table
-
-    plot_div, dt_div, bokeh_script = '','',''
-
-    
-    user = user.lower()
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    q = """select * from appointments where random = '{r}'""".format(r=user)
-
-
-    df = pd.read_sql(con=conn, sql=q)
-
-    if not df.empty:
-
-        appointments = df
-
-        for a,i in appointments.iterrows():
-            start = i.startdate
-            finish = i.finishdate
-            setpoint = i.availability
-            #print("start", start, finish)
-            row_indexer = power_df[(power_df.timestamp > start) & (power_df.timestamp< finish)].index
-            p(len(row_indexer))
-            power_df.loc[row_indexer, 'setpoint'] = setpoint
-
-        url = "/appointment/{windfarm}/{random}/edit/@start".format(windfarm=windfarm,random=user)
-        #taptool = plot.select(type=TapTool)
-        #taptool = rect.select(type=TapTool)
-
-        alert_js = """
-        
-            console.log("PARENT: " + showDiv(source.data['jobnumber'][source.selected["1d"].indices]))
-
-        """   
-
-    # Add OLD Forecast Power by jittering averages of old values
-    # get average values_to_take numbers and add randint
-    i = 0
-    values_to_take = 30
-
-    import random
-
-    max_index = max(power_df.index)
-
-    while i < max_index:
-        floor, ceiling = i, min(i+values_to_take-1, max_index)
-        values = power_df.loc[floor:ceiling,'percent']
-        avg = sum(values)/len(values)
-        guess = avg + random.randint(-10,10)
-
-        guess = 0 if guess < 0 else guess
-        guess = 100 if guess > 100 else guess
-        
-        power_df.loc[floor:ceiling,'forecast'] = guess
-    
-        i+=values_to_take
-
-    
-
-    
-
-    
-
-
-    now = pd.Timestamp.now().tz_localize('GMT')
-
-    readings = []
-
-    if appointments.finishdate.max().tz_localize('GMT') > now:
-
-        targeted_end = (appointments.finishdate.max() + datetime.timedelta(days=2)).round('24h').tz_localize('GMT')
-
-    else:
-
-        targeted_end = (power_df.timestamp.max() + datetime.timedelta(days=7)).round('24h').tz_convert('GMT')
-        
-    freq = pd._libs.tslib.Timedelta('0 days 00:10:00')
-
-    d = now
-
-    while d < targeted_end:
-
-        readings.append({
-            'timestamp':d, 'setpoint':100
-        })
-
-        d += freq
-        #p(d)
-
-    forecast_av_df = pd.DataFrame(readings)
-
-    for a,i in appointments.iterrows():
-        #print(i)
-        start = i.startdate
-        finish = i.finishdate
-        setpoint = i.availability
-        #print("start", start, finish)
-        row_indexer = forecast_av_df[(forecast_av_df.timestamp > start) & (forecast_av_df.timestamp < finish)].index
-        #print(row_indexer, setpoint)
-        forecast_av_df.loc[row_indexer, 'setpoint'] = setpoint
-
-    
-
-        
-    previous_forecast = power_df.iloc[-1,]['forecast']
-
-    i = 0
-
-    values_to_take = 6
-
-    import random
-
-    while i < max(forecast_av_df.index):
-        floor, ceiling = i, min(i+values_to_take-1, max(forecast_av_df.index))
-        guess = previous_forecast + random.randint(-1,1)
-        
-        guess = 0 if guess < 0 else guess
-        guess = 100 if guess > 100 else guess
-        
-        forecast_av_df.loc[floor:ceiling,'forecast'] = guess
-    
-        i+=values_to_take
-        previous_forecast = guess
-    
-
-    
-    
-        
-        
-
-    power_source = plt.ColumnDataSource(data=power_df)
-
-    step = plot.line(
-            x= 'timestamp', y='setpoint',
-            source=power_source,
-            alpha=1, color='orange',
-            line_width=1
-        )
-
-    old_power = plot.line(
-        x= 'timestamp', y='forecast',
-        source=power_source,
-        alpha=1, color='pink',
-        line_width=1
-    )
-
-    power = plot.line(
-                x= 'timestamp', y='percent',
-                source=power_source,
-                alpha=1, color='green',
-                line_width=1
-            )
-
-    forecast_source = plt.ColumnDataSource(data=forecast_av_df)
-    
-    forecast = plot.line (
-        x ='timestamp', y='setpoint',
-        source = forecast_source, color = 'orange', line_dash=[6,3]
-    )
-
-    forecast_power = plot.line (
-        x ='timestamp', y='forecast',
-        source = forecast_source, color = 'pink', 
-         line_dash=[6,6]
-    )
-
-
-    legend = Legend(items=[
-        ("Availability",   [step]),
-        ("Old Forecast Power", [old_power]),
-        ("Actual Power", [power]),
-        ("Forecast Power", [forecast_power]),
-        ("Forecast Availability", [forecast]),
-        #("Now", [vline])
-    ], location=(0, -40))
-
-    plot.add_layout(legend, 'right')
-
-    hover_line = HoverTool(renderers=[old_power])
+    hover_line = HoverTool(renderers=[line])
     hover_line.tooltips  = """
         <div>
-            <span style="font-size: 15px;">@date @time</span>
+            <span style="font-size: 15px; font-weight: bold;">@time</span>
         </div>
         <table border="0" cellpadding="10">
             <tr>
-                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">30m avg: </span></th>
+                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">1/2-hourly average: </span></th>
                 <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@power MW</span></td>
             </tr>
             <tr>
-                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">30m min:</span></th>
+                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">1/2-hourly_min:</span></th>
                 <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@hourly_min MW</span></td>
             </tr>
             <tr>
-                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">30m max:</span></th>
+                <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">1/2-hourly_max:</span></th>
                 <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@hourly_max MW</span></td>
             </tr>
         </table>
     """
 
     plot.add_tools(hover_line)
-
-    source, data_table   = create_outages_datatable(df)
-    source.callback = CustomJS(
-        args = dict(source=source),
-        code = alert_js
-    )
-
-    #plot.legend.location = "top_left"
-    plot.legend.click_policy= "hide"
-    #plot.legend.background_fill_alpha = 0.01
-    #plot.legend.location=(10, -30)
     
 
-    from bokeh.layouts import column
-    col = column(plot, data_table)
+    col = None
 
-    leg = [rend for rend in plot.renderers if type(rend)==bokeh.models.annotations.Legend][0]
+    def add_outages_to_plot(plot, df):
+
+        df['midpoint'] = df.startdate + (df.finishdate-df.startdate)/2
+        df['midpoint'] = df.midpoint.apply(lambda x: np.datetime64(x).astype('datetime64[ms]').view(np.int64))
+        df['duration'] = df.finishdate-df.startdate
+        df['height'] = 100 - (df.availability)
+        df['width'] = df.duration.apply(lambda x: x.total_seconds()*1000)
+        df['start'] = df.startdate.dt.strftime("%A, %e %B %H:%M")
+        df['finish'] = df.finishdate.dt.strftime("%A, %e %B %H:%M")
+        df['y'] = 100 -(df['height']/2)
+
+        rect = plot.rect(
+
+                x = 'midpoint',
+                y = 'y',
+                height = 'height',
+                width = 'width',
+                color = 'purple',
+                source=df
+        )
+
+        return rect
+
+    def create_outages_datatable(df):
+
+        from bokeh.models import ColumnDataSource
+        from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
+        source = ColumnDataSource(df)
+        columns = [
+            TableColumn(field="start", title="Start"),
+            TableColumn(field="finish", title="Finish"),
+            TableColumn(field="availability", title="% Available"),
+            TableColumn(field="timestamp", title="Updated At"),
+        ]
+
+        table_height = len(df) * 24 + 30
+        data_table = DataTable(source=source, columns=columns,row_headers=True, width=770, height=table_height,
+          sizing_mode='scale_both' )
+
+        return source, data_table
+
+    plot_div, dt_div, bokeh_script = '','',''
+
+    if random:
+        random = random.lower()
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        q = """select * from appointments where random = '{r}'""".format(r=random)
 
 
+        df = pd.read_sql(con=conn, sql=q)
 
-    bokeh_script, comps  = components({"plot":plot,"dt":data_table,"legend":leg})
-    plot_div, dt_div, legend_div = comps['plot'], comps['dt'], comps['legend']
+        if not df.empty:
+
+            rect = add_outages_to_plot(plot,df)
+
+            hover_rect = HoverTool(renderers=[rect])
+            hover_rect.tooltips  = """
+                <div>
+                    <span style="font-size: 15px; font-weight: bold;">@date</span>
+                </div><a href="http://www.bbc.co.uk">:
+                <table border="0" cellpadding="10">
+                    <tr>
+                        <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">Start: </span></th>
+                        <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@start MWh</span></td>
+                    </tr>
+                    <tr>
+                        <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">End:</span></th>
+                        <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@finish</span></td>
+                    </tr>
+                    <tr>
+                        <th><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">% Available:</span></th>
+                        <td><span style="font-family:'Consolas', 'Lucida Console', monospace; font-size: 12px;">@availability</span></td>
+                    </tr>
+                </table>
+                </a>
+            """
+
+            plot.add_tools(hover_rect)
+
+            
+            
+            url = "/appointment/{windfarm}/{random}/edit/@start".format(windfarm=windfarm,random=random)
+            taptool = plot.select(type=TapTool)
+            #taptool = rect.select(type=TapTool)
+
+            alert_js = """
+           
+                console.log("PARENT: " + showDiv(source.data['jobnumber'][source.selected["1d"].indices]))
+
+               
+            """
+
+            source, data_table   = create_outages_datatable(df)
+            source.callback = CustomJS(
+                args = dict(source=source),
+                code = alert_js
+            )
+
+            from bokeh.layouts import column
+            col = column(plot, data_table)
+            bokeh_script, comps  = components({"plot":plot,"dt":data_table})
+            plot_div, dt_div = comps['plot'], comps['dt']
             
             
     
@@ -496,7 +330,7 @@ def bokehs(windfarm='moneen', user='', outlook=False):
         col = plot
         bokeh_script, plot_div  = components(plot)
 
-    
+    plot.xaxis[0].ticker = DatetimeTicker()
 
     if not outlook:
         template = "l2.html"
@@ -504,8 +338,8 @@ def bokehs(windfarm='moneen', user='', outlook=False):
         template = "outlook.html"
 
     p("TEMPLATE BEING USED: " + template)
-    return render_template(template, windfarm=windfarm, random=user, 
-        plot_div=plot_div, dt_div=dt_div, bs=bokeh_script, legend_div = legend_div)
+    return render_template(template, windfarm=windfarm, random=random, 
+        plot_div=plot_div, dt_div=dt_div, bs=bokeh_script)
 
 @app.route("/appointment/<windfarm>/<random>/edit/", methods = ['GET', 'POST'])
 @app.route("/appointment/<windfarm>/<random>/edit/<jid>", methods = ['GET', 'POST'])
