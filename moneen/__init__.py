@@ -253,12 +253,22 @@ def bokehs(windfarm='moneen', user='', outlook=False):
         from bokeh.models import ColumnDataSource
         from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
         datefmt = DateFormatter(format="dd M yy h:mm")
+        
+
+
+        df['startdate'] = pd.to_datetime(df['startdate'],unit='s').astype(str)
+        df['finishdate'] = pd.to_datetime(df['finishdate'],unit='s').astype(str)
+        df['timestamp'] = pd.to_datetime(df['timestamp'],unit='s').astype(str)
+
         source = ColumnDataSource(df)
+
+        p(df.timestamp.head())
+
         columns = [
-            TableColumn(field="startdate", title="Start",formatter=datefmt),
-            TableColumn(field="finishdate", title="Finish",formatter=datefmt),
+            TableColumn(field="startdate", title="Start"),
+            TableColumn(field="finishdate", title="Finish"),
             TableColumn(field="availability", title="% Available"),
-            TableColumn(field="timestamp", title="Updated At",formatter=datefmt),
+            TableColumn(field="timestamp", title="Updated At"),
         ]
 
         table_height = len(df) * 24 + 30
@@ -343,7 +353,7 @@ def bokehs(windfarm='moneen', user='', outlook=False):
 
         targeted_end = (power_df.timestamp.max() + datetime.timedelta(days=7)).round('24h').tz_convert('GMT')
         
-    freq = pd.tslib.Timedelta('0 days 00:10:00')
+    freq = pd.Timedelta('0 days 00:10:00')
 
     d = now
 
