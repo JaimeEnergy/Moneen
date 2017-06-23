@@ -1,5 +1,5 @@
 Flask
 psycopg2
-bokeh
+bokeh >= 0.12.6
 pandas
 Flask-Cache
