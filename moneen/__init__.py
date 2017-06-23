@@ -347,6 +347,7 @@ def bokehs(windfarm='moneen', user='', outlook=False):
 
     d = now
 
+    # test comment for git
     while d < targeted_end:
 
         readings.append({
