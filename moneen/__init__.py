@@ -343,7 +343,7 @@ def bokehs(windfarm='moneen', user='', outlook=False):
 
         targeted_end = (power_df.timestamp.max() + datetime.timedelta(days=7)).round('24h').tz_convert('GMT')
         
-    freq = pd._libs.tslib.Timedelta('0 days 00:10:00')
+    freq = pd.tslib.Timedelta('0 days 00:10:00')
 
     d = now
 
