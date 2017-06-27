@@ -224,12 +224,14 @@ def bokehs(windfarm='moneen', user='', outlook=False):
 
     # newline not respected in ticklabels !!!
     plot.xaxis.formatter = DatetimeTickFormatter(days=["%a %d %b"])
+    p(dir(plot.xaxis))
+    plot.xaxis.major_label_text_font = 'verdana'
+    plot.xaxis.major_label_text_font_size = '9pt'
 
     plot.xgrid.band_fill_color = "grey"
     plot.xgrid.band_fill_alpha = 0.05
 
     #plot.xaxis.axis_label = 'Date'
-    plot.xaxis.axis_label_text_font_size = "11pt"
     plot.yaxis.axis_label = '% Power'
     plot.yaxis.axis_label_text_font_size = "11pt"
     plot.yaxis.axis_label_text_font_style = "normal"
@@ -262,12 +264,12 @@ def bokehs(windfarm='moneen', user='', outlook=False):
 
         source = ColumnDataSource(df)
 
-        p(df.timestamp.head())
+        p(dir(TableColumn))
 
         columns = [
             TableColumn(field="startdate", title="Start"),
             TableColumn(field="finishdate", title="Finish"),
-            TableColumn(field="availability", title="% Available"),
+            TableColumn(field="availability", title="%", width=16),
             TableColumn(field="timestamp", title="Updated At"),
         ]
 
@@ -297,7 +299,7 @@ def bokehs(windfarm='moneen', user='', outlook=False):
             start = i.startdate
             finish = i.finishdate
             setpoint = i.availability
-            #print("start", start, finish)
+
             row_indexer = power_df[(power_df.timestamp > start) & (power_df.timestamp< finish)].index
             p(len(row_indexer))
             power_df.loc[row_indexer, 'setpoint'] = setpoint
